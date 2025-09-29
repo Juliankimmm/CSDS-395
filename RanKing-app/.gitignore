@@ -1,10 +1,10 @@
 # Ignore all datasets
 RanKing-app/ml/datasets/
-RanKing-app/ml/datasets/new_images
-RanKing-app/ml/datasets/train/safe
-RanKing-app/ml/datasets/train/unsafe
-RanKing-app/ml/datasets/val/safe
-RanKing-app/ml/datasets/val/unsafe
+RanKing-app/ml/datasets/new_images/
+RanKing-app/ml/datasets/train/safe/
+RanKing-app/ml/datasets/train/unsafe/
+RanKing-app/ml/datasets/val/safe/
+RanKing-app/ml/datasets/val/unsafe/
 
 # Ignore saved models if you want
 RanKing-app/ml/models/moderation_model.pth
