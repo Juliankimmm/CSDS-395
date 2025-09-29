@@ -1,0 +1,5 @@
+# Ignore all datasets
+RanKing-app/ml/datasets/
+
+# Ignore saved models if you want
+RanKing-app/ml/models/moderation_model.pth
