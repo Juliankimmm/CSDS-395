@@ -2,19 +2,20 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms, models
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 import os
 import shutil
-import random
 from pathlib import Path
+import random
+from tqdm import tqdm
 
 # --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 # --- Paths ---
-BASE_MODEL_PATH = "RanKing-app/ml/models/moderation_model.pth"  # previously trained weights
-NEW_IMAGES_DIR = "RanKing-app/ml/datasets/new_images"  # folder where you drop new images
+BASE_MODEL_PATH = "RanKing-app/ml/models/moderation_model.pth"  # existing weights
+NEW_IMAGES_DIR = "RanKing-app/ml/datasets/new_images"           # new images
 TRAIN_DIR = "RanKing-app/ml/datasets/train"
 VAL_DIR = "RanKing-app/ml/datasets/val"
 VAL_SPLIT = 0.2
@@ -29,13 +30,13 @@ CATEGORY_LABEL = {
 
 # --- Transforms ---
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((160, 160)),  # smaller size for faster training
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406],
                          [0.229, 0.224, 0.225])
 ])
 
-# --- Function to process new images ---
+# --- Process new images into train/val ---
 def process_new_images():
     if not os.path.exists(NEW_IMAGES_DIR):
         return
@@ -53,44 +54,53 @@ def process_new_images():
         split_idx = int(len(images) * (1 - VAL_SPLIT))
         train_imgs, val_imgs = images[:split_idx], images[split_idx:]
 
-        # Determine target dirs
         label = CATEGORY_LABEL.get(category, "unsafe")
         train_target = Path(TRAIN_DIR) / label
         val_target = Path(VAL_DIR) / label
         train_target.mkdir(parents=True, exist_ok=True)
         val_target.mkdir(parents=True, exist_ok=True)
 
-        # Copy files to main dataset
         for src in train_imgs:
             shutil.copy(src, train_target / src.name)
         for src in val_imgs:
             shutil.copy(src, val_target / src.name)
 
-        # Delete processed images from new_images
+        # Delete processed images
         for img in images:
             img.unlink()
 
-        print(f"Processed {len(images)} new images for category '{category}'.")
+        print(f"Processed {len(images)} new images for '{category}'.")
 
-# --- Process new images ---
 process_new_images()
 
-# --- Datasets ---
+# --- Load only new images for fast training ---
+def load_new_dataset(new_dir):
+    all_new_images = []
+    for label, class_name in enumerate(sorted(CATEGORY_LABEL.values())):
+        class_dir = Path(new_dir) / class_name
+        if not class_dir.exists():
+            continue
+        files = [p for p in class_dir.iterdir() if p.is_file()]
+        for f in files:
+            all_new_images.append((f, label))
+    return all_new_images
+
+# Optional: If NEW_IMAGES_DIR already sorted into train/val, you can use ImageFolder directly
 train_dataset = datasets.ImageFolder(TRAIN_DIR, transform=transform)
 val_dataset = datasets.ImageFolder(VAL_DIR, transform=transform)
 
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 
 # --- Model ---
 model = models.mobilenet_v3_small(pretrained=True)
 model.classifier[3] = nn.Linear(model.classifier[3].in_features, 2)
 model.to(device)
 
-# --- Load previous weights if they exist ---
+# --- Load previous weights ---
 if os.path.exists(BASE_MODEL_PATH):
     model.load_state_dict(torch.load(BASE_MODEL_PATH, map_location=device))
-    print("Loaded pretrained weights from moderation_model.pth")
+    print("Loaded pretrained weights.")
 else:
     print("No existing weights found. Training from scratch.")
 
@@ -98,16 +108,15 @@ else:
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-# --- Fine-tuning loop ---
-num_epochs = 5
+# --- Fine-tuning loop with progress bar ---
+num_epochs = 2  # fewer epochs for fast incremental training
 
 for epoch in range(num_epochs):
-    # --- Training ---
     model.train()
     train_loss, correct_train, total_train = 0.0, 0, 0
-    for imgs, labels in train_loader:
-        imgs, labels = imgs.to(device), labels.to(device)
 
+    for imgs, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} Training"):
+        imgs, labels = imgs.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(imgs)
         loss = criterion(outputs, labels)
@@ -126,11 +135,10 @@ for epoch in range(num_epochs):
     model.eval()
     val_loss, correct_val, total_val = 0.0, 0, 0
     with torch.no_grad():
-        for imgs, labels in val_loader:
+        for imgs, labels in tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} Validation"):
             imgs, labels = imgs.to(device), labels.to(device)
             outputs = model(imgs)
             loss = criterion(outputs, labels)
-
             val_loss += loss.item() * imgs.size(0)
             _, predicted = outputs.max(1)
             total_val += labels.size(0)
@@ -147,3 +155,14 @@ for epoch in range(num_epochs):
 torch.save(model.state_dict(), BASE_MODEL_PATH)
 print(f"Updated weights saved to {BASE_MODEL_PATH}")
 
+# --- Human reinforcement function ---
+def human_feedback(model, image_path):
+    """Display image and get human label"""
+    from PIL import Image
+    img = Image.open(image_path).convert("RGB")
+    img.show()
+    feedback = input("Is this image SAFE? (y/n): ").lower()
+    return 0 if feedback == 'y' else 1
+
+# Example usage
+# label = human_feedback(model, "path/to/new/image.jpg")
