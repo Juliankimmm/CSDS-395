@@ -4,6 +4,11 @@ import requests
 import random
 from pathlib import Path
 
+"""
+Used to prepare the dataset by downloading images from URLs listed in text files from this github:
+https://github.com/alex000kim/nsfw_data_scraper
+"""
+
 # --- Config ---
 DATASET_DIR = "RanKing-app/ml/datasets"
 

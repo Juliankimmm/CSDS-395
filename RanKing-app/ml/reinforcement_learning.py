@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms, models
-from torch.utils.data import DataLoader, TensorDataset
 from PIL import Image
 from pathlib import Path
 import os
@@ -42,7 +41,7 @@ else:
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-# --- Human-in-the-loop function ---
+# --- Human-in-the-loop function with confidence ---
 def human_feedback_train():
     new_path = Path(NEW_IMAGES_DIR)
     images = [p for p in new_path.iterdir() if p.is_file()]
@@ -50,10 +49,24 @@ def human_feedback_train():
         print("No new images found.")
         return
 
+    softmax = nn.Softmax(dim=1)
+
     for img_path in images:
         # Show image
         img = Image.open(img_path).convert("RGB")
         img.show()
+
+        # Model prediction
+        model.eval()
+        with torch.no_grad():
+            img_tensor = transform(img).unsqueeze(0).to(device)
+            output = model(img_tensor)
+            probs = softmax(output)
+            confidence, pred_idx = torch.max(probs, dim=1)
+            pred_label = "safe" if pred_idx.item() == 0 else "unsafe"
+
+        print(f"Model predicts: {pred_label} "
+              f"with confidence: {confidence.item()*100:.2f}%")
 
         # Get human label
         while True:
@@ -65,19 +78,16 @@ def human_feedback_train():
         label = 0 if feedback == 'y' else 1
         label_name = "safe" if label == 0 else "unsafe"
 
-        # Prepare tensor
-        img_tensor = transform(img).unsqueeze(0).to(device)
-        target = torch.tensor([label], dtype=torch.long).to(device)
-
         # Train for 1 step
         model.train()
         optimizer.zero_grad()
+        target = torch.tensor([label], dtype=torch.long).to(device)
         output = model(img_tensor)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
 
-        print(f"Trained on {img_path.name} as {label_name}.")
+        print(f"Trained on {img_path.name} as {label_name}.\n")
 
         # Move image to train folder
         train_folder = Path(TRAIN_DIR) / label_name
