@@ -12,3 +12,7 @@ struct ResultsView: View {
         }
     }
 }
+
+#Preview {
+    ResultsView()
+}

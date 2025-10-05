@@ -10,3 +10,7 @@ struct SubmitView: View {
         }
     }
 }
+
+#Preview {
+    SubmitView()
+}
