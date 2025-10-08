@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms, models
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from pathlib import Path
 import os
 
@@ -11,12 +11,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 # --- Paths ---
-BASE_MODEL_PATH = "RanKing-app/ml/models/moderation_model.pth"
-NEW_IMAGES_DIR = "RanKing-app/ml/datasets/new_images"
-TRAIN_DIR = "RanKing-app/ml/datasets/train"
+BASE_MODEL_PATH = Path("RanKing-app/ml/models/moderation_model.pth")
+NEW_IMAGES_DIR = Path("RanKing-app/ml/datasets/new_images")
+TRAIN_DIR = Path("RanKing-app/ml/datasets/train")
 
-os.makedirs(TRAIN_DIR, exist_ok=True)
-os.makedirs(NEW_IMAGES_DIR, exist_ok=True)
+TRAIN_DIR.mkdir(parents=True, exist_ok=True)
+NEW_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Transform ---
 transform = transforms.Compose([
@@ -26,25 +26,40 @@ transform = transforms.Compose([
                          [0.229, 0.224, 0.225])
 ])
 
-# --- Load Model ---
-model = models.mobilenet_v3_small(pretrained=True)
-model.classifier[3] = nn.Linear(model.classifier[3].in_features, 2)
-model.to(device)
+# --- Model Loader (detects architecture automatically) ---
+def load_model():
+    if not BASE_MODEL_PATH.exists():
+        print("No pretrained model found. Using MobileNetV3 base.")
+        model = models.mobilenet_v3_small(weights="IMAGENET1K_V1")
+        model.classifier[3] = nn.Linear(model.classifier[3].in_features, 2)
+        return model.to(device)
 
-if os.path.exists(BASE_MODEL_PATH):
-    model.load_state_dict(torch.load(BASE_MODEL_PATH, map_location=device))
-    print("Loaded pretrained weights.")
-else:
-    print("Training from scratch.")
+    # Try MobileNet first
+    try:
+        model = models.mobilenet_v3_small(weights=None)
+        model.classifier[3] = nn.Linear(model.classifier[3].in_features, 2)
+        model.load_state_dict(torch.load(BASE_MODEL_PATH, map_location=device))
+        print("Loaded MobileNetV3 checkpoint.")
+        return model.to(device)
+    except Exception:
+        print("Checkpoint incompatible with MobileNet. Trying ResNet18...")
+        model = models.resnet18(weights=None)
+        num_ftrs = model.fc.in_features
+        model.fc = nn.Linear(num_ftrs, 2)
+        model.load_state_dict(torch.load(BASE_MODEL_PATH, map_location=device))
+        print("Loaded ResNet18 checkpoint.")
+        return model.to(device)
+
+# --- Load Model ---
+model = load_model()
 
 # --- Loss & Optimizer ---
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-# --- Human-in-the-loop function with confidence ---
+# --- Human Feedback Training ---
 def human_feedback_train():
-    new_path = Path(NEW_IMAGES_DIR)
-    images = [p for p in new_path.iterdir() if p.is_file()]
+    images = [p for p in NEW_IMAGES_DIR.iterdir() if p.is_file()]
     if not images:
         print("No new images found.")
         return
@@ -52,11 +67,13 @@ def human_feedback_train():
     softmax = nn.Softmax(dim=1)
 
     for img_path in images:
-        # Show image
-        img = Image.open(img_path).convert("RGB")
-        img.show()
+        try:
+            img = Image.open(img_path).convert("RGB")
+        except (UnidentifiedImageError, OSError):
+            print(f"Skipping invalid file: {img_path}")
+            continue
 
-        # Model prediction
+        # --- Prediction ---
         model.eval()
         with torch.no_grad():
             img_tensor = transform(img).unsqueeze(0).to(device)
@@ -65,20 +82,20 @@ def human_feedback_train():
             confidence, pred_idx = torch.max(probs, dim=1)
             pred_label = "safe" if pred_idx.item() == 0 else "unsafe"
 
-        print(f"Model predicts: {pred_label} "
-              f"with confidence: {confidence.item()*100:.2f}%")
+        print(f"\nPredicted: {pred_label} "
+              f"({confidence.item()*100:.2f}% confidence) for {img_path.name}")
 
-        # Get human label
+        # --- Human Feedback ---
         while True:
-            feedback = input(f"Is this image SAFE? (y/n) for {img_path.name}: ").lower()
+            feedback = input("Is this image SAFE? (y/n): ").lower()
             if feedback in ["y", "n"]:
                 break
-            print("Invalid input. Type 'y' for safe or 'n' for unsafe.")
+            print("Please enter 'y' for safe or 'n' for unsafe.")
 
-        label = 0 if feedback == 'y' else 1
+        label = 0 if feedback == "y" else 1
         label_name = "safe" if label == 0 else "unsafe"
 
-        # Train for 1 step
+        # --- One-step training update ---
         model.train()
         optimizer.zero_grad()
         target = torch.tensor([label], dtype=torch.long).to(device)
@@ -87,16 +104,17 @@ def human_feedback_train():
         loss.backward()
         optimizer.step()
 
-        print(f"Trained on {img_path.name} as {label_name}.\n")
+        print(f"Trained on {img_path.name} as {label_name} (loss={loss.item():.6f})")
 
-        # Move image to train folder
-        train_folder = Path(TRAIN_DIR) / label_name
-        train_folder.mkdir(parents=True, exist_ok=True)
-        img_path.rename(train_folder / img_path.name)
+        # --- Move to dataset folder ---
+        dest_folder = TRAIN_DIR / label_name
+        dest_folder.mkdir(parents=True, exist_ok=True)
+        img_path.rename(dest_folder / img_path.name)
 
-    # Save updated model
+    # --- Save updated model ---
     torch.save(model.state_dict(), BASE_MODEL_PATH)
-    print(f"Updated model saved to {BASE_MODEL_PATH}")
+    print(f"\n Updated model saved to {BASE_MODEL_PATH}")
 
+# --- Run ---
 if __name__ == "__main__":
     human_feedback_train()
