@@ -15,8 +15,7 @@ class SampleData {
 
     private init() {
         let schema = Schema([
-            Contest.self, // Add all your SwiftData models here
-            VotingContest.self
+            Contest.self // Add all your SwiftData models here
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
 

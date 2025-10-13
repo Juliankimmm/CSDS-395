@@ -14,8 +14,7 @@ struct RanKingApp: App {
         WindowGroup {
             LoginView()
                 .modelContainer( for: [
-                    Contest.self,
-                    VotingContest.self
+                    Contest.self
                 ])
         }
     }
