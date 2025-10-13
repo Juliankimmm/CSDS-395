@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct RanKingApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LoginView()
+                .modelContainer( for: [
+                    Contest.self
+                ])
         }
     }
 }
