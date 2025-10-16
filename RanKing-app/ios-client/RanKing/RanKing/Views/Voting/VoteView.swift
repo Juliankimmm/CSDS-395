@@ -1,8 +1,21 @@
 import SwiftUI
 
-struct VoteView: View {
-    @State private var voteMessage: String?
+struct VoteViewData {
+    var image1 : Image
+    var image2 : Image
+}
 
+struct VoteView: View {
+    
+    let contestId: UUID
+    
+    @State var allSubmissions : [Submission] = []
+    @State private var topSubmission: Submission?
+    @State private var bottomSubmission: Submission?
+    @State private var nextSubmissionIndex = 0
+    
+    @State private var popUpScale : CGFloat = 1.0
+    
     var body: some View {
         VStack(spacing: 20) {
             Text("Vote on Outfit")
@@ -10,42 +23,91 @@ struct VoteView: View {
                 .bold()
 
             VStack(spacing: 20) {
-                VotableImageView(
-                    imageName: "jezthisguyishot"
-                ) { voteDirection in
-                    registerVote(swipeDir: voteDirection)
+                if let submission = topSubmission {
+                    VotableImageView(
+                        image: Image(submission.imagePath),
+                        scale: $popUpScale
+                    ) { voteDirection in
+                        replaceSubmission(in: .top)
+                        withAnimation {
+                            popUpScale = 1.0
+                        }
+                    }
+                    .id(submission.id)
                 }
 
-                VotableImageView(
-                    imageName: "cutiepie"
-                ) { voteDirection in
-                    registerVote(swipeDir: voteDirection)
+                if let submission = bottomSubmission {
+                    VotableImageView(
+                        image: Image(submission.imagePath),
+                        scale: $popUpScale
+                    ) { voteDirection in
+                        replaceSubmission(in: .bottom)
+                        withAnimation {
+                            popUpScale = 1.0
+                        }
+                    }
+                    .id(submission.id)
                 }
             }
-
-            if let message = voteMessage {
-                Text(message)
+            
+            if topSubmission == nil && bottomSubmission == nil && !allSubmissions.isEmpty {
+                Text("No more submissions to vote on!")
                     .font(.headline)
-                    .foregroundColor(.green)
-                    .transition(.opacity)
-                    .padding(.top)
             }
         }
+        .onAppear(perform: setupInitialSubmissions)
         .padding()
     }
     
-    func registerVote(swipeDir : SwipeDirection) -> Void {
-        if (swipeDir == SwipeDirection.up) {
-            voteMessage = "👍 Voted up bottom outfit!"
+    func replaceSubmission(in position: ImagePosition) {
+        print("Voted and replacing submission at position: \(position)")
+
+        guard nextSubmissionIndex < allSubmissions.count else {
+            if position == .top {
+                topSubmission = nil
+            } else {
+                bottomSubmission = nil
+            }
+            return
         }
-        else {
-            voteMessage = "👎 Voted down top outfit!"
+        
+        let newSubmission = allSubmissions[nextSubmissionIndex]
+        withAnimation(.bouncy(duration: 0.5)) {
+            if position == .top {
+                topSubmission = newSubmission
+            } else {
+                bottomSubmission = newSubmission
+            }
+            popUpScale = 0.1
         }
+        
+        nextSubmissionIndex += 1
+    }
+
+    func setupInitialSubmissions() {
+        print("GET submissions/{contest_id}")
+        allSubmissions = [
+            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
+            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
+            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
+            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
+            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
+            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
+            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
+            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0)
+        ]
+        
+        guard allSubmissions.count >= 2 else { return }
+        
+        topSubmission = allSubmissions[0]
+        bottomSubmission = allSubmissions[1]
+        
+        nextSubmissionIndex = 2
+        
+        //TODO load Async ALL images
     }
 }
 
-
-
 #Preview {
-    VoteView()
+    VoteView(contestId: UUID())
 }

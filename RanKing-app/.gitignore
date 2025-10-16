@@ -6,5 +6,5 @@ RanKing-app/ml/datasets/train/unsafe/
 RanKing-app/ml/datasets/val/safe/
 RanKing-app/ml/datasets/val/unsafe/
 
-
+__pycache__/
 

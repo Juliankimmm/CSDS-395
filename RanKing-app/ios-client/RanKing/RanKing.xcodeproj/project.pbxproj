@@ -32,8 +32,8 @@
 		AB9819542E91D18700F82554 = {
 			isa = PBXGroup;
 			children = (
-				AB98195F2E91D18700F82554 /* RanKing */,
 				AB98195E2E91D18700F82554 /* Products */,
+				AB98195F2E91D18700F82554 /* RanKing */,
 			);
 			sourceTree = "<group>";
 		};
