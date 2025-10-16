@@ -4,6 +4,8 @@ import requests
 import json
 import getpass
 from datetime import datetime, timedelta
+import io
+import uuid # For generating random names
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -144,7 +146,8 @@ class ApiClientCLI:
             self.log("Invalid ID. Please enter a number.", status="ERROR")
 
     def create_submission(self):
-        """Prompt for contest ID and image path to create a submission."""
+        """Prompt for contest ID and image path to create a submission.
+        If no image path is provided, a dummy image is generated and used."""
         if not self.token:
             self.log("You must be logged in to create a submission.", status="ERROR")
             return
@@ -152,20 +155,42 @@ class ApiClientCLI:
         self.log("--- Create Submission ---")
         try:
             contest_id = int(input("Enter Contest ID to submit to: "))
-            image_path = input("Enter path to the image file: ")
+            
+            image_path = input("Enter path to the image file (leave blank to use dummy image): ").strip()
 
-            with open(image_path, "rb") as f:
-                files = {"file": (os.path.basename(image_path), f)}
+            file_to_upload = None
+            filename = None
+            
+            if image_path:
+                # Use the provided file
+                if not os.path.exists(image_path):
+                    self.log(f"File not found at path: {image_path}", status="ERROR")
+                    return
+                filename = os.path.basename(image_path)
+                file_to_upload = open(image_path, "rb") # Open the actual file
+            else:
+                # Generate a dummy PNG image in memory
+                self.log("No image path provided. Generating dummy image...", status="INFO")
+                dummy_image_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDATx\xda\xed\xc1\x01\x01\x00\x00\x00\xc2\xa0\xf7Om\x00\x00\x00\x00IEND\xaeB`\x82"
+                filename = f"dummy_submission_{uuid.uuid4().hex[:8]}.png" # Random filename
+                file_to_upload = io.BytesIO(dummy_image_data) # Use BytesIO for in-memory data
+            
+            # Ensure we have a file_to_upload before proceeding
+            if file_to_upload:
+                files = {"file": (filename, file_to_upload, "image/png")}
                 response = requests.post(
                     f"{BASE_URL}/contests/{contest_id}/submissions",
                     files=files,
                     headers=self.headers,
                 )
                 self._handle_response(response)
+                
+                # Close the file if it was opened from disk
+                if image_path:
+                    file_to_upload.close()
+
         except ValueError:
-            self.log("Invalid Contest ID.", status="ERROR")
-        except FileNotFoundError:
-            self.log(f"File not found at path: {image_path}", status="ERROR")
+            self.log("Invalid Contest ID. Please enter a number.", status="ERROR")
         except Exception as e:
             self.log(f"An unexpected error occurred: {e}", status="ERROR")
 
@@ -197,7 +222,7 @@ def print_menu():
     print("4. Get all contests")
     print("5. Get contest details by ID")
     print("6. Get submissions for a contest")
-    print("7. Create a new submission")
+    print("7. Create a new submission") # Updated description
     print("8. Vote for a submission")
     print("0. Exit")
     print("-" * 30)
