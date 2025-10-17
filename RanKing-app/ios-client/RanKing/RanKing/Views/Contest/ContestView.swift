@@ -12,11 +12,13 @@ import PhotosUI
 struct ContestViewData {
     let contestTitle: String
     let contestDescription: String
-    let submissionNumber: Int
+    let constantId: Int
     let votingPeriod: DateInterval
 }
 
 struct ContestView: View {
+    
+    let networkManager = NetworkManager.networkManager
     
     let contestData : ContestViewData
     
@@ -39,8 +41,11 @@ struct ContestView: View {
                     .shadow(radius: 5)
                     .padding()
                 Button("Submit") {
-                    print("submmiting image!")
-                    postImage(image: displayedImage)
+                    Task {
+                        if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
+                            await postImage(imageData: data)
+                        }
+                    }
                 }
                 .buttonStyle(.borderedProminent)
             } else {
@@ -50,8 +55,6 @@ struct ContestView: View {
             
             Spacer()
             
-            Text("Submissions \(contestData.submissionNumber)")
-                .font(.headline)
             Text("Voting Period: \(contestData.votingPeriod)")
             VStack {
                 Text("Submit Fashion Image")
@@ -73,9 +76,14 @@ struct ContestView: View {
         }
     }
     
-    func postImage(image: Image) {
-        // POST /submit/image-{contest_id}
-        print("POST sumbit/image-{contest_id}")
+    func postImage(imageData: Data) async {
+        do {
+            let accessToken = UserDefaults.standard.string(forKey: "token") ?? ""
+            let submission = try await networkManager.sendSubmission(imageData: imageData, contestId: contestData.constantId, accessToken: accessToken)
+            print("Submission successful. URL: \(submission.image_path)")
+        } catch {
+            print("An error occurred during submission: \(error)")
+        }
     }
     
     
@@ -91,7 +99,7 @@ extension ContestViewData {
         .init(
             contestTitle: contestTitle,
             contestDescription: contestDescription,
-            submissionNumber: submissionNumber,
+            constantId: 4,
             votingPeriod: votingPeriod
         )
     }

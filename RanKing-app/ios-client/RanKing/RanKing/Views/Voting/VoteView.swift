@@ -7,11 +7,13 @@ struct VoteViewData {
 
 struct VoteView: View {
     
-    let contestId: UUID
+    let networkManager : NetworkManager = NetworkManager.networkManager
     
-    @State var allSubmissions : [Submission] = []
-    @State private var topSubmission: Submission?
-    @State private var bottomSubmission: Submission?
+    let contestId: Int
+    
+    @State var allSubmissions : [SubmissionResponse] = []
+    @State private var topSubmission: SubmissionResponse?
+    @State private var bottomSubmission: SubmissionResponse?
     @State private var nextSubmissionIndex = 0
     
     @State private var popUpScale : CGFloat = 1.0
@@ -25,7 +27,7 @@ struct VoteView: View {
             VStack(spacing: 20) {
                 if let submission = topSubmission {
                     VotableImageView(
-                        image: Image(submission.imagePath),
+                        image: Image(submission.image_path),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .top)
@@ -38,7 +40,7 @@ struct VoteView: View {
 
                 if let submission = bottomSubmission {
                     VotableImageView(
-                        image: Image(submission.imagePath),
+                        image: Image(submission.image_path),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .bottom)
@@ -86,28 +88,23 @@ struct VoteView: View {
 
     func setupInitialSubmissions() {
         print("GET submissions/{contest_id}")
-        allSubmissions = [
-            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
-            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
-            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
-            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
-            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
-            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0),
-            .init(username: "Jonathan", email: "@gmail", imagePath: "jezthisguyishot", contestId: 1234761234786, votesAgainst: 0),
-            .init(username: "Jonny", email: "@gmail", imagePath: "cutiepie", contestId: 14234, votesAgainst: 0)
-        ]
+        Task {
+            allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
+            //TODO get the images
+        }
         
         guard allSubmissions.count >= 2 else { return }
         
         topSubmission = allSubmissions[0]
         bottomSubmission = allSubmissions[1]
-        
         nextSubmissionIndex = 2
         
         //TODO load Async ALL images
     }
+    
+    
 }
 
 #Preview {
-    VoteView(contestId: UUID())
+    VoteView(contestId: 4)
 }
