@@ -13,9 +13,6 @@ struct RanKingApp: App {
     var body: some Scene {
         WindowGroup {
             LoginView()
-                .modelContainer( for: [
-                    Contest.self
-                ])
         }
     }
 }

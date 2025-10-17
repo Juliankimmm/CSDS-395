@@ -41,7 +41,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, status_code=201)
 def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user and return access token"""
     user = db.query(User).filter(User.email == user_credentials.email).first()

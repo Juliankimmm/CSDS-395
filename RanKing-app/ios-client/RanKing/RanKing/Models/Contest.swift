@@ -8,29 +8,11 @@
 import Foundation
 import SwiftData
 
-@Model
-final class Contest : Identifiable {
-    var id : UUID
+final class Contest : Codable  {
+    var contest_id : Int
     var name: String
-    var contestDescription: String
-    var numSumbissions: Int
-    var startDate: Date
-    var endDate: Date
-    var contestPhase : ContestPhase
-    
-    init(name: String, contestDescription: String, startDate: Date, endDate: Date, contestPhase : ContestPhase) {
-        self.id = UUID()
-        self.name = name
-        self.contestDescription = contestDescription
-        self.numSumbissions = 0
-        self.startDate = startDate
-        self.endDate = endDate
-        self.contestPhase = contestPhase
-    }
-}
-
-enum ContestPhase : String, Codable {
-    case SUBMISSION = "submission"
-    case VOTING = "voting"
-    case FINISHED = "finished"
+    var description: String
+    var submission_start_date: String
+    var submission_end_date: String
+    var voting_end_date : String
 }
