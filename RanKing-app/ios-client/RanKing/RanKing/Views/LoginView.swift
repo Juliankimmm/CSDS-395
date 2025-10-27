@@ -1,11 +1,16 @@
 import SwiftUI
 
 struct LoginView: View {
+    
+    let networkManager = NetworkManager.networkManager
+    
     @State private var email = ""
     @State private var password = ""
     
     
     @State private var isLoggedIn: Bool = false
+    
+    @State private var isConnectedToInternet: Bool = true
 
     var body: some View {
         if (isLoggedIn) {
@@ -21,13 +26,27 @@ struct LoginView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                 Button("Login") {
                     // TODO: call backend API
-                    withAnimation(.smooth) {
-                        isLoggedIn = true
+                    Task {
+                        if let token = try? await networkManager.login(email: email, password: password) {
+                            UserDefaults.standard.set(token.access_token, forKey: "token")
+                            withAnimation(.smooth) {
+                                isLoggedIn = true
+                            }
+                        }
                     }
                 }
                 .padding()
+                if !isConnectedToInternet {
+                    Text("No internet connection")
+                        .foregroundColor(Color.red)
+                }
             }
             .padding()
+            .onAppear() {
+                Task {
+                    isConnectedToInternet = try await networkManager.testServerIsRunning()
+                }
+            }
         }
     }
 }

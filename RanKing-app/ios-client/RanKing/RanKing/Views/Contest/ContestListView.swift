@@ -6,20 +6,23 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContestListView: View {
     
-    @Query var contests: [Contest] = []
+    let networkManager  = NetworkManager.networkManager
+    
+    @State var contests: [Contest] = []
+    
+    @State var votingContests: [Contest] = []
     
     var body: some View {
         TabView {
             Tab("Active Contests", systemImage: "list.bullet") {
-                ActiveContestsListView(contests: contests)
+                ActiveContestsListView(contests: $contests)
             }
 
             Tab("Voting Contests", systemImage: "list.bullet") {
-                VotingContestsListView(votingContests: contests)
+                VotingContestsListView(votingContests: $votingContests)
             }
         }
         .onAppear(perform: fetchData)
@@ -27,14 +30,15 @@ struct ContestListView: View {
     }
     
     func fetchData() {
-        // TODO fetch all contests GET contests/
-        print("GET contests/")
+        Task {
+            contests = try await networkManager.fetchContests() ?? []
+        }
     }
 }
 
 struct VotingContestsListView: View {
     
-    let votingContests : [Contest]
+    @Binding var votingContests : [Contest]
     
     var body: some View {
         VStack {
@@ -45,12 +49,9 @@ struct VotingContestsListView: View {
             Spacer()
             NavigationStack {
                 List {
-                    ForEach(votingContests) { votingContests in
-                        if (votingContests.contestPhase == ContestPhase.VOTING) {
-                            let contestId : UUID = votingContests.id
-                            NavigationLink(destination: VoteView(contestId: contestId)) {
-                                Text("Voting Contest")
-                            }
+                    ForEach(votingContests, id: \.contest_id) { votingContest in
+                        NavigationLink(destination: VoteView(contestId: votingContest.contest_id)) {
+                            Text("Voting Contest")
                         }
                     }
                 }
@@ -63,7 +64,7 @@ struct VotingContestsListView: View {
 
 struct ActiveContestsListView: View {
     
-    let contests : [Contest]
+    @Binding var contests : [Contest]
     
     var body: some View {
         VStack {
@@ -74,15 +75,13 @@ struct ActiveContestsListView: View {
             Spacer()
             NavigationStack {
                 List {
-                    ForEach(contests) { contest in
+                    ForEach(contests, id: \.contest_id) { contest in
                         let contestViewData = ContestViewData(contestTitle: contest.name,
-                                                              contestDescription:contest.contestDescription,
-                                                              submissionNumber: contest.numSumbissions,
+                                                              contestDescription:contest.description,
+                                                              constantId: contest.contest_id,
                                                               votingPeriod: .init(start: Date(), duration: 120))
-                        if (contest.contestPhase == ContestPhase.SUBMISSION) {
                             NavigationLink(destination: ContestView(contestData: contestViewData)) {
                                 Text(contestViewData.contestTitle)
-                            }
                         }
                     }
                 }
@@ -96,5 +95,4 @@ struct ActiveContestsListView: View {
 
 #Preview {
     ContestListView()
-        .modelContainer(SampleData.shared.modelContainer)
 }
