@@ -7,13 +7,18 @@ from pathlib import Path
 import json
 import os
 
-from your_model_file import ConvNextWithCLIP, DEVICE, IMG_SIZE, NUM_CLASSES  # import your trained model
+from models.model_def import ConvNextWithCLIP, DEVICE, IMG_SIZE, NUM_CLASSES
+import torch
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+IMG_SIZE = 384      # or whatever value you used in training
+NUM_CLASSES = 2
 
 # --- Paths ---
-BASE_MODEL_PATH = Path("RanKing-app/ml/models/moderation_model.pth")
-TEMP_JSON_PATH = Path("RanKing-app/ml/models/temp.json")
-NEW_IMAGES_DIR = Path("RanKing-app/ml/datasets/new_images")
-TRAIN_DIR = Path("RanKing-app/ml/datasets/train")
+BASE_MODEL_PATH = Path("../../RanKing-app/ml/models/moderation_model.pth")
+TEMP_JSON_PATH = Path("../../RanKing-app/ml/models/temp.json")
+NEW_IMAGES_DIR = Path("../../RanKing-app/ml/datasets/new_images")
+TRAIN_DIR = Path("../../RanKing-app/ml/datasets/train")
 
 TRAIN_DIR.mkdir(parents=True, exist_ok=True)
 NEW_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,7 +44,15 @@ def load_model():
     model = ConvNextWithCLIP(clip_weight=0.3)
     if BASE_MODEL_PATH.exists():
         print(f"Loading model weights from {BASE_MODEL_PATH} ...")
-        model.load_state_dict(torch.load(BASE_MODEL_PATH, map_location=DEVICE))
+        checkpoint = torch.load(BASE_MODEL_PATH, map_location=DEVICE)
+        if "model_state_dict" in checkpoint:
+            missing, unexpected = model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+            if missing or unexpected:
+                print(f"Skipped keys -> Missing: {missing}, Unexpected: {unexpected}")
+        else:
+            missing, unexpected = model.load_state_dict(checkpoint, strict=False)
+            if missing or unexpected:
+                print(f"Skipped keys -> Missing: {missing}, Unexpected: {unexpected}")
     else:
         print("No trained model found. Initializing from scratch.")
     return model.to(DEVICE)
