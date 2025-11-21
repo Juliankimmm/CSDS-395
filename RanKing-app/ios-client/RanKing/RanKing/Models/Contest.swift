@@ -8,6 +8,11 @@
 import Foundation
 import SwiftData
 
+final class ContestResponse : Codable  {
+    var statusCode: Int
+    var body: String
+}
+
 final class Contest : Codable  {
     var contest_id : Int
     var name: String

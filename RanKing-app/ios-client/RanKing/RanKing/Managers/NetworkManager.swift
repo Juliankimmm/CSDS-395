@@ -8,22 +8,28 @@
 import Foundation
 import SwiftUI
 
-// An enumeration for handling different network errors.
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
     case decodingError
 }
 
-@MainActor // Ensures that updates to @Published properties happen on the main thread.
+@MainActor 
 class NetworkManager: ObservableObject {
     
-    public static var networkManager = NetworkManager()
+    private static var instance: NetworkManager?
     
+    public static func getInstance() -> NetworkManager {
+        if instance == nil {
+            instance = NetworkManager()
+        }
+        return instance!
+    }
+        
     // MARK: - GET Request
     func fetchContests(query: String? = "") async throws -> [Contest]? {
         //TODO add query if necessary
-        guard let url = URL(string: "http://localhost:8585/contests/") else {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/test/contests") else {
             throw NetworkError.invalidURL
         }
         let (data, response) = try await URLSession.shared.data(from: url)
@@ -34,16 +40,18 @@ class NetworkManager: ObservableObject {
         }
         
         print("200!")
-        var contests: [Contest]? = nil
+        var contestsRes: [Contest]? = nil
         do {
-            contests = try JSONDecoder().decode([Contest].self, from: data)
+            let response = try JSONDecoder().decode(ContestResponse.self, from: data)
+            let contestsData = Data(response.body.utf8)
+            contestsRes = try JSONDecoder().decode([Contest].self, from: contestsData)
         } catch {
             print("Decoding Error :( \(error)")
             throw NetworkError.decodingError
         }
         
-        print("DECODED!!! \(contests ?? [])")
-        return contests
+        print("DECODED!!! \(contestsRes ?? [])")
+        return contestsRes
     }
     
     func fetchSumbissions(contestId: Int) async throws -> [SubmissionResponse]? {

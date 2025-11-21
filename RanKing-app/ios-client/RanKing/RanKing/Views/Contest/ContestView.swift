@@ -18,7 +18,7 @@ struct ContestViewData {
 
 struct ContestView: View {
     
-    let networkManager = NetworkManager.networkManager
+    let networkManager = NetworkManager.getInstance()
     
     let contestData : ContestViewData
     
