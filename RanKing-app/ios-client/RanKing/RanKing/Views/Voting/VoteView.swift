@@ -7,7 +7,7 @@ struct VoteViewData {
 
 struct VoteView: View {
     
-    let networkManager : NetworkManager = NetworkManager.networkManager
+    let networkManager : NetworkManager = NetworkManager.getInstance()
     
     let contestId: Int
     

@@ -8,18 +8,24 @@
 import Foundation
 import SwiftUI
 
-// An enumeration for handling different network errors.
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
     case decodingError
 }
 
-@MainActor // Ensures that updates to @Published properties happen on the main thread.
+@MainActor 
 class NetworkManager: ObservableObject {
     
-    public static var networkManager = NetworkManager()
+    private static var instance: NetworkManager?
     
+    public static func getInstance() -> NetworkManager {
+        if instance == nil {
+            instance = NetworkManager()
+        }
+        return instance!
+    }
+        
     // MARK: - GET Request
     func fetchContests(query: String? = "") async throws -> [Contest]? {
         //TODO add query if necessary

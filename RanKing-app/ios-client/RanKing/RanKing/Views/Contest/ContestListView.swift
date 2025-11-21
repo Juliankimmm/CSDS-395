@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContestListView: View {
     
-    let networkManager  = NetworkManager.networkManager
+    let networkManager  = NetworkManager.getInstance()
     
     @State var contests: [Contest] = []
     
