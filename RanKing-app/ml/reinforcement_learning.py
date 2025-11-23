@@ -15,7 +15,7 @@ IMG_SIZE = 384      # or whatever value you used in training
 NUM_CLASSES = 2
 
 # --- Paths ---
-BASE_MODEL_PATH = Path("../../RanKing-app/ml/models/moderation_model.pth")
+BASE_MODEL_PATH = Path("../../RanKing-app/ml/models/moderation_model_best.pth")
 TEMP_JSON_PATH = Path("../../RanKing-app/ml/models/temp.json")
 NEW_IMAGES_DIR = Path("../../RanKing-app/ml/datasets/new_images")
 TRAIN_DIR = Path("../../RanKing-app/ml/datasets/train")

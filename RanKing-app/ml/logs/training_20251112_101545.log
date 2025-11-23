@@ -1,0 +1,86 @@
+2025-11-12 10:15:45,715 | INFO | Training started - Log file: ./logs\training_20251112_101545.log
+2025-11-12 10:15:45,715 | INFO | Arguments: {'train_dir': './datasets/train', 'val_dir': './datasets/val', 'cache_images': False, 'img_size': 384, 'resize_schedule': '384', 'clip_weight': 0.15, 'dropout': 0.4, 'freeze_backbone': 0, 'use_attention': False, 'lr': 5e-05, 'weight_decay': 0.0001, 'batch_size': 12, 'epochs': 15, 'accum_steps': 2, 'num_workers': 4, 'focal_gamma': 0.5, 'cb_beta': 0.99, 'smoothing_safe': 0.05, 'smoothing_unsafe': 0.2, 'minority_oversample_factor': 3.0, 'curriculum_epochs': 3, 'mixup_alpha': 0.2, 'cutmix_alpha': 0.5, 'use_mixup': False, 'scheduler_t0': 5, 'swa_start': 10, 'use_onecycle': False, 'tta': False, 'early_stopping_patience': 5, 'early_stopping_min_delta': 0.001, 'checkpoint_dir': './checkpoints', 'keep_checkpoints': 3, 'resume': False, 'save_model': './models/moderation_model_best.pth', 'log_dir': './logs'}
+2025-11-12 10:15:45,951 | INFO | Class Distribution (train):
+2025-11-12 10:15:45,951 | INFO |    Safe (0):   92,147 samples
+2025-11-12 10:15:45,951 | INFO |    Unsafe (1): 301 samples
+2025-11-12 10:15:45,951 | INFO |    Imbalance ratio: 306.1:1
+2025-11-12 10:15:45,953 | INFO | Class-balanced weights: [0.9751208 1.0248792]
+2025-11-12 10:15:49,759 | INFO | No checkpoint found, starting from scratch
+2025-11-12 10:15:49,760 | INFO | Starting training from epoch 0
+2025-11-12 10:15:49,760 | INFO |    Total epochs: 15
+2025-11-12 10:15:49,760 | INFO |    Curriculum phase: 3 epochs
+2025-11-12 10:15:49,760 | INFO |    Device: cuda
+2025-11-12 10:15:49,761 | INFO | 
+Epoch 1/15 | BALANCED | Size: 384px
+2025-11-13 00:25:46,740 | INFO | Results:
+2025-11-13 00:25:46,741 | INFO |    Loss: 0.682095 | Unc Loss: 0.013346
+2025-11-13 00:25:46,741 | INFO |    Acc: 0.9980 | F1: 0.8421 | AUC: 0.9988 | BalAcc: 0.9914
+2025-11-13 00:25:46,741 | INFO |    Per-class metrics:
+2025-11-13 00:25:46,776 | INFO |    Optimal threshold: 0.7029
+2025-11-13 00:26:15,034 | INFO | Checkpoint saved: epoch 0
+2025-11-13 00:26:28,388 | INFO | 
+Epoch 2/15 | BALANCED | Size: 384px
+2025-11-13 14:35:35,892 | INFO | Results:
+2025-11-13 14:35:35,892 | INFO |    Loss: 0.673068 | Unc Loss: 0.004272
+2025-11-13 14:35:35,892 | INFO |    Acc: 0.9983 | F1: 0.8649 | AUC: 0.9996 | BalAcc: 0.9915
+2025-11-13 14:35:35,892 | INFO |    Per-class metrics:
+2025-11-13 14:35:35,898 | INFO |    Optimal threshold: 0.7277
+2025-11-13 14:35:56,614 | INFO | Checkpoint saved: epoch 1
+2025-11-13 14:36:10,846 | INFO | 
+Epoch 3/15 | BALANCED | Size: 384px
+2025-11-14 04:54:46,301 | INFO | Results:
+2025-11-14 04:54:46,301 | INFO |    Loss: 0.671953 | Unc Loss: 0.003225
+2025-11-14 04:54:46,301 | INFO |    Acc: 0.9984 | F1: 0.8671 | AUC: 0.9994 | BalAcc: 0.9763
+2025-11-14 04:54:46,302 | INFO |    Per-class metrics:
+2025-11-14 04:54:46,312 | INFO |    Optimal threshold: 0.7376
+2025-11-14 04:55:07,252 | INFO | Checkpoint saved: epoch 2
+2025-11-14 04:55:21,143 | INFO | 
+Epoch 4/15 | WEIGHTED | Size: 384px
+2025-11-14 19:09:56,285 | INFO | Results:
+2025-11-14 19:09:56,285 | INFO |    Loss: 0.684046 | Unc Loss: 0.003842
+2025-11-14 19:09:56,285 | INFO |    Acc: 0.9991 | F1: 0.9134 | AUC: 0.9690 | BalAcc: 0.9460
+2025-11-14 19:09:56,286 | INFO |    Per-class metrics:
+2025-11-14 19:09:56,291 | INFO |    Optimal threshold: 0.7376
+2025-11-14 19:10:20,248 | INFO | Checkpoint saved: epoch 3
+2025-11-14 19:10:36,446 | INFO | 
+Epoch 5/15 | WEIGHTED | Size: 384px
+2025-11-15 09:25:09,025 | INFO | Results:
+2025-11-15 09:25:09,025 | INFO |    Loss: 0.682130 | Unc Loss: 0.003073
+2025-11-15 09:25:09,025 | INFO |    Acc: 0.9991 | F1: 0.9185 | AUC: 0.9842 | BalAcc: 0.9766
+2025-11-15 09:25:09,025 | INFO |    Per-class metrics:
+2025-11-15 09:25:09,030 | INFO |    Optimal threshold: 0.7227
+2025-11-15 09:25:33,611 | INFO | Checkpoint saved: epoch 4
+2025-11-15 09:25:49,330 | INFO | 
+Epoch 6/15 | WEIGHTED | Size: 384px
+2025-11-15 23:40:50,566 | INFO | Results:
+2025-11-15 23:40:50,566 | INFO |    Loss: 0.683881 | Unc Loss: 0.004535
+2025-11-15 23:40:50,566 | INFO |    Acc: 0.9989 | F1: 0.9037 | AUC: 0.9995 | BalAcc: 0.9689
+2025-11-15 23:40:50,567 | INFO |    Per-class metrics:
+2025-11-15 23:40:50,572 | INFO |    Optimal threshold: 0.7178
+2025-11-15 23:41:17,081 | INFO | Checkpoint saved: epoch 5
+2025-11-15 23:41:17,085 | INFO | 
+Epoch 7/15 | WEIGHTED | Size: 384px
+2025-11-16 14:02:06,872 | INFO | Results:
+2025-11-16 14:02:06,872 | INFO |    Loss: 0.682886 | Unc Loss: 0.003348
+2025-11-16 14:02:06,873 | INFO |    Acc: 0.9993 | F1: 0.9313 | AUC: 0.9845 | BalAcc: 0.9690
+2025-11-16 14:02:06,873 | INFO |    Per-class metrics:
+2025-11-16 14:02:06,878 | INFO |    Optimal threshold: 0.7425
+2025-11-16 14:02:27,773 | INFO | Checkpoint saved: epoch 6
+2025-11-16 14:02:44,185 | INFO | 
+Epoch 8/15 | WEIGHTED | Size: 384px
+2025-11-17 04:22:51,480 | INFO | Results:
+2025-11-17 04:22:51,480 | INFO |    Loss: 0.682970 | Unc Loss: 0.002835
+2025-11-17 04:22:51,480 | INFO |    Acc: 0.9988 | F1: 0.9000 | AUC: 0.9993 | BalAcc: 0.9841
+2025-11-17 04:22:51,481 | INFO |    Per-class metrics:
+2025-11-17 04:22:51,510 | INFO |    Optimal threshold: 0.7376
+2025-11-17 04:23:13,958 | INFO | Checkpoint saved: epoch 7
+2025-11-17 04:23:14,095 | INFO | 
+Epoch 9/15 | WEIGHTED | Size: 384px
+2025-11-17 18:43:15,445 | INFO | Results:
+2025-11-17 18:43:15,446 | INFO |    Loss: 0.682740 | Unc Loss: 0.002075
+2025-11-17 18:43:15,446 | INFO |    Acc: 0.9990 | F1: 0.9104 | AUC: 0.9996 | BalAcc: 0.9689
+2025-11-17 18:43:15,446 | INFO |    Per-class metrics:
+2025-11-17 18:43:15,454 | INFO |    Optimal threshold: 0.7475
+2025-11-17 18:43:45,598 | INFO | Checkpoint saved: epoch 8
+2025-11-17 18:43:45,602 | INFO | 
+Epoch 10/15 | WEIGHTED | Size: 384px
