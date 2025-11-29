@@ -1,4 +1,35 @@
+# Core deep learning and vision
 torch==2.4.0
 torchvision==0.19.0
+torchaudio==2.4.0
+
+# Numerical and data handling
 numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
 pillow==10.4.0
+
+# Optimization and schedulers
+torch-optimizer==0.3.0
+
+# Model calibration and temperature scaling
+netcal==1.3.6
+
+# CLIP model (OpenAI)
+git+https://github.com/openai/CLIP.git
+
+# Data loading, augmentations, and imbalance handling
+tqdm==4.66.5
+albumentations==1.4.8
+imbalanced-learn==0.12.3
+
+# Hyperparameter optimization and experiment tracking
+optuna==3.6.1
+wandb==0.18.3
+
+# Test-time augmentation and ensembling
+ttach==0.0.3
+
+# Visualization and debugging
+matplotlib==3.9.2
+seaborn==0.13.2
