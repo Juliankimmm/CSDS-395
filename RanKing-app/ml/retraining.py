@@ -1017,7 +1017,7 @@ def main(args):
     
     # Final summary
     logging.info("\n" + "="*70)
-    logging.info("✨ Training Complete!")
+    logging.info("Training Complete!")
     logging.info("="*70)
     logging.info(f"\nSaved Files:")
     logging.info(f"   ├─ Best model:      {args.save_model}")
