@@ -8,7 +8,7 @@ struct LoginView: View {
     @State private var password = ""
     @State private var showEmailLoginSheet: Bool = false
     
-    @State private var isLoggedIn: Bool = false
+    @State private var isLoggedIn: Bool = true
     
     @State private var isConnectedToInternet: Bool = true
 
