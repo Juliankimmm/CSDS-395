@@ -55,7 +55,8 @@ class NetworkManager: ObservableObject {
     }
     
     func fetchSumbissions(contestId: Int) async throws -> [SubmissionResponse]? {
-        guard let url = URL(string: "http://localhost:8585/contests/\(contestId)/submissions") else {
+        print(contestId)
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
         }
         let (data, response) = try await URLSession.shared.data(from: url)
@@ -76,7 +77,7 @@ class NetworkManager: ObservableObject {
 
     // MARK: - POST Request
     func register(username: String, email: String, password: String) async throws -> User? {
-        guard let url = URL(string: "http://localhost/register") else {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/register") else {
             throw NetworkError.invalidURL
         }
 
@@ -105,7 +106,7 @@ class NetworkManager: ObservableObject {
     }
     
     func login(email: String, password: String) async throws -> Token? {
-        guard let url = URL(string: "http://localhost:8585/login") else {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/login") else {
             throw NetworkError.invalidURL
         }
         var request = URLRequest(url: url)

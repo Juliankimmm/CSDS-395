@@ -27,7 +27,7 @@ struct VoteView: View {
             VStack(spacing: 20) {
                 if let submission = topSubmission {
                     VotableImageView(
-                        image: Image(submission.image_path),
+                        image: Image("jezthisguyishot"),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .top)
@@ -40,7 +40,7 @@ struct VoteView: View {
 
                 if let submission = bottomSubmission {
                     VotableImageView(
-                        image: Image(submission.image_path),
+                        image: Image("cutiepie"),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .bottom)
@@ -89,8 +89,9 @@ struct VoteView: View {
     func setupInitialSubmissions() {
         print("GET submissions/{contest_id}")
         Task {
-            allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
+//            allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
             //TODO get the images
+            allSubmissions = [SubmissionResponse(), SubmissionResponse()]
         }
         
         guard allSubmissions.count >= 2 else { return }
@@ -106,5 +107,5 @@ struct VoteView: View {
 }
 
 #Preview {
-    VoteView(contestId: 4)
+    VoteView(contestId: 12)
 }
