@@ -77,7 +77,7 @@ struct ContestView: View {
     }
     
     func postImage(imageData: Data) async {
-        if let submission = try? await networkManager.sendSubmission2(imageData: imageData, contestId: contestData.constantId, userId: 1) {
+        if let submission = try? await networkManager.sendSubmission2(imageData: imageData, contestId: contestData.constantId, userId: 9) {
             if submission {
                 print("Submission successful. URL")
             }
