@@ -246,6 +246,7 @@ class NetworkManager: ObservableObject {
 
     
     func sendVote(submissionId: String, userId : String) async throws -> Bool? {
+        print("sending vote")
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/vote") else {
             throw NetworkError.invalidURL
         }
@@ -260,6 +261,7 @@ class NetworkManager: ObservableObject {
 
         print(String(data: data, encoding: .utf8) ?? "No data")
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
+            print("returning false")
             return false;
         }
         print("user_id: \(userId) Successfully voted on \(submissionId)")

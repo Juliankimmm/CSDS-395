@@ -135,8 +135,9 @@ struct VoteView: View {
             Text("Vote on Outfit")
                 .font(.title2)
                 .bold()
-
+            
             VStack(spacing: 20) {
+                // TOP IMAGE
                 if let submission = topSubmission {
                     ObservableSubmissionView(
                         submissionAndImage: submission,
@@ -144,8 +145,11 @@ struct VoteView: View {
                     ) { voteDirection in
                         handleVote(for: submission, position: .top)
                     }
+                    .allowsHitTesting(bottomSubmission != nil)
+                    .opacity(bottomSubmission != nil ? 1.0 : 1.0)
                 }
-
+                
+                // BOTTOM IMAGE
                 if let submission = bottomSubmission {
                     ObservableSubmissionView(
                         submissionAndImage: submission,
@@ -153,12 +157,20 @@ struct VoteView: View {
                     ) { voteDirection in
                         handleVote(for: submission, position: .bottom)
                     }
+                    .allowsHitTesting(topSubmission != nil)
+                    .opacity(topSubmission != nil ? 1.0 : 1.0)
                 }
             }
             
+            // Text logic: Show "No more" if BOTH are gone,
+            // OR show "Waiting for opponent" if only one is left.
             if topSubmission == nil && bottomSubmission == nil && !allSubmissions.isEmpty {
                 Text("No more submissions to vote on!")
                     .font(.headline)
+            } else if (topSubmission == nil || bottomSubmission == nil) && !allSubmissions.isEmpty {
+                Text("This image was the best!!!")
+                    .font(.headline)
+                    .foregroundColor(.primary)
             }
         }
         .onAppear(perform: setupInitialSubmissions)
@@ -236,5 +248,5 @@ struct VoteView: View {
 }
 
 #Preview {
-    VoteView(contestId: "403")
+    VoteView(contestId: "1")
 }
