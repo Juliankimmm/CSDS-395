@@ -1,34 +1,28 @@
 # get_contest_details_lambda.py
-import sys
-import logging
-import pymysql
 import json
+import boto3
 import os
+from decimal import Decimal
 
-user_name = os.environ['USER_NAME']
-password = os.environ['PASSWORD']
-rds_proxy_host = os.environ['RDS_PROXY_HOST']
-db_name = os.environ['DB_NAME']
+dynamodb = boto3.resource('dynamodb')
+table_name = os.environ['CONTESTS_TABLE']
+table = dynamodb.Table(table_name)
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-try:
-    conn = pymysql.connect(host=rds_proxy_host, user=user_name, passwd=password, db=db_name, connect_timeout=5)
-except pymysql.MySQLError as e:
-    logger.error("ERROR: Could not connect to MySQL instance.")
-    logger.error(e)
-    sys.exit(1)
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
-    contest_id = event['pathParameters']['contest_id']
-
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:
-        sql = "SELECT * FROM Contests WHERE id=%s"
-        cur.execute(sql, (contest_id,))
-        contest = cur.fetchone()
-
-    if not contest:
-        return {"statusCode": 404, "body": json.dumps({"error": "Contest not found"})}
-
-    return {"statusCode": 200, "body": json.dumps(contest, default=str)}
+    try:
+        contest_id = event['pathParameters']['contest_id']
+        
+        response = table.get_item(Key={'contest_id': contest_id})
+        
+        if 'Item' not in response:
+            return {"statusCode": 404, "body": json.dumps({"error": "Contest not found"})}
+            
+        return {"statusCode": 200, "body": json.dumps(response['Item'], cls=DecimalEncoder)}
+    except Exception as e:
+        return {"statusCode": 400, "body": json.dumps({"error": str(e)})}
