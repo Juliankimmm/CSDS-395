@@ -62,7 +62,7 @@ struct RankedSwipeView: View {
     private func load() async {
         // Fetch, sort by vote_count desc, and show first card
         let subs = (try? await networkManager.fetchSumbissions(contestId: contestId)) ?? []
-        let sorted = subs.sorted { $0.vote_count > $1.vote_count }
+        let sorted = subs.sorted { $0.vote_count < $1.vote_count }
         await MainActor.run {
             ranked = sorted
             // Prefetch first few images to warm the cache
@@ -116,7 +116,7 @@ struct RankedSwipeView: View {
 }
 
 #Preview {
-    RankedSwipeView(contestId: "403")
+    RankedSwipeView(contestId: "1")
 }
 
 private struct ConfettiOverlay: View {
