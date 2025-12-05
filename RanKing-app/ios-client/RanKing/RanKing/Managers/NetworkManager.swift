@@ -235,7 +235,7 @@ class NetworkManager: ObservableObject {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         print(String(data: data, encoding: .utf8) ?? "No data")
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
             return false;
         }
         return true

@@ -83,9 +83,6 @@ struct ContestView: View {
                 if submission {
                     print("Submission successful. URL")
                 }
-                else {
-                    print("error")
-                }
             }
         }
         

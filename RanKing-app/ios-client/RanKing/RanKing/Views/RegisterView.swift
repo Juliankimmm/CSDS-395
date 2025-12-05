@@ -8,6 +8,8 @@ struct RegisterView: View {
     @State private var confirmPassword: String = ""
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String? = nil
+    
+    private let networkManager = NetworkManager.getInstance()
 
     var body: some View {
         ZStack {
@@ -71,7 +73,9 @@ struct RegisterView: View {
                     VStack(spacing: 12) {
                         Button(action: submit) {
                             HStack {
-                                if isSubmitting { ProgressView().tint(.white) }
+                                if isSubmitting {
+                                    ProgressView().tint(.white)
+                                }
                                 Text("Sign up")
                             }
                             .primaryButton()
@@ -106,6 +110,9 @@ struct RegisterView: View {
         }
         isSubmitting = true
         // TODO: Wire to NetworkManager registration when available
+        Task {
+            let res = try? await networkManager.register(username: username, email: email, password: password)
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isSubmitting = false
             dismiss()
