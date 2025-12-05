@@ -70,7 +70,9 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                         Task {
-                            try? await networkManager.sendVote(submissionId: submission.submission.submission_id, userId: 1);
+                            if let userId = UserDefaults.standard.string(forKey: "user_id") {
+                                try? await networkManager.sendVote(submissionId: submission.submission.submission_id, userId: userId);
+                            }
                         }
                     }
                 }
