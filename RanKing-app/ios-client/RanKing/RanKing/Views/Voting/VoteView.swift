@@ -5,23 +5,6 @@ struct VoteViewData {
     var image2 : Image
 }
 
-struct ObservableSubmissionView: View {
-    // This tells SwiftUI: "When this object changes, redraw THIS view immediately"
-    @ObservedObject var submissionAndImage: SubmissionAndImage
-    @Binding var scale: CGFloat
-    var onVote: (SwipeDirection) -> Void
-    
-    var body: some View {
-        VotableImageView(
-            image: submissionAndImage.image ?? Image(systemName: "photo"),
-            scale: $scale,
-            onVote: onVote
-        )
-        // This ensures SwiftUI sees it as a unique view when you swap submissions
-        .id(submissionAndImage.submission.submission_id)
-    }
-}
-
 @MainActor
 class SubmissionAndImage : ObservableObject, Identifiable {
     var submission: Submission
@@ -33,13 +16,30 @@ class SubmissionAndImage : ObservableObject, Identifiable {
     }
     
     private func loadImage() {
+        print("Start downloading: \(submission.submission_id)")
         Task {
             if let data = try? await NetworkManager.getInstance()
                 .getSubmissionImage(submissionId: submission.submission_id),
                let uiImg = UIImage(data: data) {
                 self.image = Image(uiImage: uiImg)
+                print("Finished downloading: \(submission.submission_id)")
             }
         }
+    }
+}
+
+struct ObservableSubmissionView: View {
+    @ObservedObject var submissionAndImage: SubmissionAndImage
+    @Binding var scale: CGFloat
+    var onVote: (SwipeDirection) -> Void
+    
+    var body: some View {
+        VotableImageView(
+            image: submissionAndImage.image ?? Image(systemName: "photo"),
+            scale: $scale,
+            onVote: onVote
+        )
+        .id(submissionAndImage.submission.submission_id)
     }
 }
 
@@ -47,10 +47,12 @@ struct VoteView: View {
     
     let networkManager : NetworkManager = NetworkManager.getInstance()
     let contestId: String
+    private let preloadBufferSize = 2
     @State var allSubmissions : [Submission] = []
     @State private var topSubmission: SubmissionAndImage?
     @State private var bottomSubmission: SubmissionAndImage?
-    @State private var nextSubmissionIndex = 0
+    @State private var preloadedQueue: [SubmissionAndImage] = []
+    @State private var nextBufferIndex = 0
     @State private var popUpScale : CGFloat = 1.0
     
     var body: some View {
@@ -65,15 +67,7 @@ struct VoteView: View {
                         submissionAndImage: submission,
                         scale: $popUpScale
                     ) { voteDirection in
-                        replaceSubmission(in: .top)
-                        withAnimation {
-                            popUpScale = 1.0
-                        }
-                        Task {
-                            if let userId = UserDefaults.standard.string(forKey: "user_id") {
-                                try? await networkManager.sendVote(submissionId: submission.submission.submission_id, userId: userId);
-                            }
-                        }
+                        handleVote(for: submission, position: .top)
                     }
                 }
 
@@ -82,10 +76,7 @@ struct VoteView: View {
                         submissionAndImage: submission,
                         scale: $popUpScale
                     ) { voteDirection in
-                        replaceSubmission(in: .bottom)
-                        withAnimation {
-                            popUpScale = 1.0
-                        }
+                        handleVote(for: submission, position: .bottom)
                     }
                 }
             }
@@ -99,50 +90,74 @@ struct VoteView: View {
         .padding()
     }
     
-    func replaceSubmission(in position: ImagePosition) {
-        print("Voted and replacing submission at position: \(position)")
-
-        guard nextSubmissionIndex < allSubmissions.count else {
-            if position == .top {
-                topSubmission = nil
-            } else {
-                bottomSubmission = nil
+    // Helper to clean up the body code
+    func handleVote(for submission: SubmissionAndImage, position: ImagePosition) {
+        replaceSubmission(in: position)
+        withAnimation {
+            popUpScale = 1.0
+        }
+        Task {
+            if let userId = UserDefaults.standard.string(forKey: "user_id") {
+                try? await networkManager.sendVote(submissionId: submission.submission.submission_id, userId: userId);
             }
+            
+        }
+    }
+    
+    func replaceSubmission(in position: ImagePosition) {
+        print("Replacing submission at position: \(position)")
+        guard !preloadedQueue.isEmpty else {
+            if nextBufferIndex < allSubmissions.count {
+                let directLoad = SubmissionAndImage(submission: allSubmissions[nextBufferIndex])
+                nextBufferIndex += 1
+                assignNewSubmission(directLoad, to: position)
+                return
+            }
+            if position == .top { topSubmission = nil }
+            else { bottomSubmission = nil }
             return
         }
-        
-        let newSubmission = allSubmissions[nextSubmissionIndex]
+        let newSubmission = preloadedQueue.removeFirst()
+        assignNewSubmission(newSubmission, to: position)
+        fillBuffer()
+    }
+    
+    func assignNewSubmission(_ newSubmission: SubmissionAndImage, to position: ImagePosition) {
         withAnimation(.bouncy(duration: 0.5)) {
             if position == .top {
-                topSubmission = SubmissionAndImage(submission: newSubmission)
+                topSubmission = newSubmission
             } else {
-                bottomSubmission = SubmissionAndImage(submission: newSubmission)
+                bottomSubmission = newSubmission
             }
             popUpScale = 0.1
         }
-        
-        nextSubmissionIndex += 1
+    }
+
+    func fillBuffer() {
+        while preloadedQueue.count < preloadBufferSize && nextBufferIndex < allSubmissions.count {
+            print("Preloading index: \(nextBufferIndex)")
+            let submissionMeta = allSubmissions[nextBufferIndex]
+            let preloadedItem = SubmissionAndImage(submission: submissionMeta)
+            preloadedQueue.append(preloadedItem)
+            nextBufferIndex += 1
+        }
     }
 
     func setupInitialSubmissions() {
         print("GET submissions/{contest_id}")
         Task {
             allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
-            print(allSubmissions)
-            
+            if allSubmissions.count >= 1 {
+                topSubmission = SubmissionAndImage(submission: allSubmissions[0])
+                nextBufferIndex = 1
+            }
             if allSubmissions.count >= 2 {
-                topSubmission = SubmissionAndImage(submission: allSubmissions[0])
                 bottomSubmission = SubmissionAndImage(submission: allSubmissions[1])
-                nextSubmissionIndex = 2
+                nextBufferIndex = 2
             }
-            else if allSubmissions.count == 1 {
-                topSubmission = SubmissionAndImage(submission: allSubmissions[0])
-                nextSubmissionIndex = 1
-            }
+            fillBuffer()
         }
     }
-    
-    
 }
 
 #Preview {

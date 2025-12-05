@@ -176,38 +176,25 @@ class NetworkManager: ObservableObject {
             }
 
             let (data, response) = try await URLSession.shared.data(from: url)
-
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 print("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
                 throw NetworkError.invalidResponse
             }
-
-            // SCENARIO 1: API Gateway already converted it to Binary (Image)
-            // If we can make a UIImage directly from the data, we are done.
             if UIImage(data: data) != nil {
                 print("Received raw binary image data")
                 return data
             }
-
-            // SCENARIO 2: It is a Base64 String
-            // We try to convert the data to a UTF8 string
             guard let base64String = String(data: data, encoding: .utf8) else {
                 print("Data received was neither an Image nor a String")
                 throw NetworkError.decodingError
             }
-
-            // CLEANING:
-            // 1. Remove double quotes (if API Gateway sent it as a JSON string "...")
-            // 2. Remove newlines or whitespace
             let cleaned = base64String
                 .replacingOccurrences(of: "\"", with: "")
                 .replacingOccurrences(of: "\n", with: "")
                 .replacingOccurrences(of: "\r", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // DECODING:
-            // .ignoreUnknownCharacters is the SWIFT equivalent of "base64 -i"
             guard let imageData = Data(base64Encoded: cleaned, options: .ignoreUnknownCharacters) else {
                 print("Base64 decode failed. String start: \(cleaned.prefix(20))...")
                 throw NetworkError.decodingError
