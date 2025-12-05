@@ -5,10 +5,12 @@ struct LoginView: View {
     let networkManager = NetworkManager.getInstance()
     
     @State private var email = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var showEmailLoginSheet: Bool = false
+    @State private var showRegisterSheet: Bool = false
     
-    @State private var isLoggedIn: Bool = true
+    @State private var isLoggedIn: Bool = false
     
     @State private var isConnectedToInternet: Bool = true
 
@@ -71,45 +73,21 @@ struct LoginView: View {
                         Spacer().frame(height: 10)
 
                         Button(action: {
-                            // TODO: Apple sign-in
+                            showRegisterSheet = true
                         }) {
-                            Text("Continue with Apple")
-                                .foregroundColor(.white)
-                                .font(.system(size: 18, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.black)
-                                .cornerRadius(14)
+                            Text("Sign up with Email")
+                                .secondaryButton()
                         }
                         .padding(.horizontal, 22)
 
                         Button(action: {
                             showEmailLoginSheet = true
                         }) {
-                            Text("Sign up with Email")
-                                .foregroundColor(.black)
-                                .font(.system(size: 18, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.white)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color(.systemGray3), lineWidth: 1)
-                                )
+                            Text("Log in")
+                                .primaryButton()
                         }
                         .padding(.horizontal, 22)
 
-                        HStack {
-                            Text("Already have an account?")
-                                .foregroundColor(Color(.darkGray))
-
-                            Button("Log in") {
-                                showEmailLoginSheet = true
-                            }
-                            .foregroundColor(Color.blue)
-                            .fontWeight(.semibold)
-                        }
-                        .padding(.bottom, 40)
                     }
                 }
 
@@ -125,6 +103,7 @@ struct LoginView: View {
             .sheet(isPresented: $showEmailLoginSheet) {
                 EmailPasswordLoginSheet(
                     email: $email,
+                    username: $username,
                     password: $password,
                     onLogin: {
                         if email == "Admin" || password == "admin" {
@@ -133,8 +112,10 @@ struct LoginView: View {
                         }
                         return false
                     },
-                    doNetworkLogin: { email, password in
+                    doNetworkLogin: { email, username, password in
                         if let token = try? await networkManager.login(email: email, password: password) {
+                            // Username currently unused by backend login; stored locally if needed
+                            UserDefaults.standard.set(username, forKey: "username")
                             UserDefaults.standard.set(token.access_token, forKey: "token")
                             withAnimation(.smooth) {
                                 isLoggedIn = true
@@ -144,6 +125,9 @@ struct LoginView: View {
                         return false
                     }
                 )
+            }
+            .sheet(isPresented: $showRegisterSheet) {
+                RegisterView()
             }
             .onAppear() {
                 Task {
@@ -156,49 +140,110 @@ struct LoginView: View {
 
 private struct EmailPasswordLoginSheet: View {
     @Binding var email: String
+    @Binding var username: String
     @Binding var password: String
     var onLogin: () -> Bool
-    var doNetworkLogin: (String, String) async -> Bool
+    var doNetworkLogin: (String, String, String) async -> Bool
     @Environment(\.dismiss) private var dismiss
+    @State private var isSubmitting: Bool = false
+    @State private var errorMessage: String? = nil
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                TextField("Email", text: $email)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-                SecureField("Password", text: $password)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.white,
+                    Color(.systemGray6)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-                Button("Log in") {
-                    if onLogin() {
-                        dismiss()
-                    } else {
-                        Task {
-                            let success = await doNetworkLogin(email, password)
-                            if success { dismiss() }
-                        }
+            ScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 8) {
+                        Text("Welcome back")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .phaseIn(0)
+                        Text("Log in to continue")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(.darkGray))
+                            .phaseIn(0.15)
                     }
-                }
-                .buttonStyle(.borderedProminent)
+                    .padding(.top, 24)
 
-                Button("Cancel") {
-                    dismiss()
-                }
-                .padding(.top, 4)
+                    VStack(spacing: 14) {
+                        TextField("Email", text: $email)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .phaseIn(0.2)
 
-                Spacer()
+                        TextField("Username", text: $username)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .phaseIn(0.3)
+
+                        SecureField("Password", text: $password)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .phaseIn(0.4)
+                    }
+                    .padding(.horizontal, 22)
+
+                    if let error = errorMessage, !error.isEmpty {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 22)
+                    }
+
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            if onLogin() {
+                                dismiss()
+                            } else {
+                                isSubmitting = true
+                                errorMessage = nil
+                                Task {
+                                    let success = await doNetworkLogin(email, username, password)
+                                    await MainActor.run {
+                                        isSubmitting = false
+                                        if success {
+                                            dismiss()
+                                        } else {
+                                            errorMessage = "Invalid credentials. Please try again."
+                                        }
+                                    }
+                                }
+                            }
+                        }) {
+                            HStack {
+                                if isSubmitting { ProgressView().tint(.white) }
+                                Text("Log in")
+                            }
+                            .primaryButton()
+                        }
+                        .padding(.horizontal, 22)
+                        .disabled(email.isEmpty || username.isEmpty || password.isEmpty || isSubmitting)
+
+                        Button(action: { dismiss() }) {
+                            Text("Cancel")
+                                .secondaryButton()
+                        }
+                        .padding(.horizontal, 22)
+                    }
+                    .padding(.bottom, 24)
+                }
             }
-            .padding()
-            .navigationTitle("Log in")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
 
 #Preview {
-    LoginView()
+    LoginView() 
 }
 
 struct PhaseInEffect: ViewModifier {
@@ -221,8 +266,49 @@ struct PhaseInEffect: ViewModifier {
     }
 }
 
+private struct PrimaryButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                LinearGradient(colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.12), radius: 10, y: 5)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .opacity(1)
+    }
+}
+
+private struct SecondaryButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color(.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color(.systemGray3), lineWidth: 1)
+            )
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.06), radius: 6, y: 3)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private extension View {
+    func primaryButton() -> some View { self.modifier(PrimaryButtonStyle()) }
+    func secondaryButton() -> some View { self.modifier(SecondaryButtonStyle()) }
+}
+
 extension View {
     func phaseIn(_ delay: Double = 0) -> some View {
         self.modifier(PhaseInEffect(delay: delay))
     }
 }
+
