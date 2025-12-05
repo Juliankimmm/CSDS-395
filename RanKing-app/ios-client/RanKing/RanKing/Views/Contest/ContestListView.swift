@@ -17,7 +17,7 @@ private func imageName(for contest: Contest) -> String {
     if lower.contains("winter"){
         return "winter"
     }
-    return ["fashion1", "fashion2", "fashion3"].randomElement() ?? "fashion1"
+    return "spring"
 }
 
 private struct ContestCard: View {
@@ -27,20 +27,42 @@ private struct ContestCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
-                .frame(height: 180)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .overlay(
-                    LinearGradient(
-                        colors: [Color.black.opacity(0.0), Color.black.opacity(0.6)],
-                        startPoint: .center,
-                        endPoint: .bottom
+            Group {
+                if imageName == "waiting" {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color(.systemGray5))
+                            .frame(height: 180)
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.0), Color.black.opacity(0.6)],
+                            startPoint: .center,
+                            endPoint: .bottom
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                } else {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 180)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                        .overlay(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.0), Color.black.opacity(0.6)],
+                                startPoint: .center,
+                                endPoint: .bottom
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+            }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
@@ -99,6 +121,7 @@ struct ContestListView: View {
     
     @State var contests: [Contest] = []
     @State var votingContests: [Contest] = []
+    @State private var allContests: [Contest] = []
     @State private var searchQuery: String = ""
     
     var body: some View {
@@ -157,7 +180,7 @@ struct ContestListView: View {
             }
             Tab("Completed Contests", systemImage: "checkmark.seal") {
                 NavigationStack {
-                    CompletedContestsListView(contests: $contests)
+                    CompletedContestsListView(contests: $allContests)
                         .navigationBarTitleDisplayMode(.large)
                         .toolbar {
                             ToolbarItem(placement: .principal) {
@@ -186,8 +209,11 @@ struct ContestListView: View {
     
     func fetchData() {
         Task {
-            contests = try await networkManager.fetchContests() ?? []
-            votingContests = Array(contests)
+            let all = try await networkManager.fetchContests() ?? []
+            let now = Date()
+            allContests = all
+            contests = all.filter { $0.submission_end_date > now }
+            votingContests = all.filter { $0.submission_end_date <= now && $0.voting_end_date >= now }
         }
     }
 }
@@ -205,6 +231,8 @@ struct VotingContestsListView: View {
     }
     @State private var sortOption: SortOption = .newest
     
+    @State private var prefetchedContestIds: Set<String> = []
+    
     private var filteredAndSorted: [Contest] {
         var items = votingContests
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -220,6 +248,41 @@ struct VotingContestsListView: View {
             items = items.sorted { $0.contest_id < $1.contest_id }
         }
         return items
+    }
+    
+    private func prefetchTopImages(for contestId: String, limit: Int = 6) {
+        // Prevent duplicate prefetch for the same contest
+        if prefetchedContestIds.contains(contestId) { return }
+        prefetchedContestIds.insert(contestId)
+        Task(priority: .background) {
+            // Hop to the main actor only to get the instance
+            let manager: NetworkManager = await MainActor.run { NetworkManager.getInstance() }
+            // Fetch submissions for this contest
+            let subs = (try? await manager.fetchSumbissions(contestId: contestId)) ?? []
+            // Sort by vote_count desc to prefetch likely leaders
+            let ranked = subs.sorted { $0.vote_count > $1.vote_count }
+            let count = min(limit, ranked.count)
+            for i in 0..<count {
+                let id = ranked[i].submission_id
+                if let _ = await ImageCache.shared.image(for: id) { continue }
+                if let data = try? await manager.getSubmissionImage(submissionId: id) {
+                    if let uiImg = UIImage(data: data) {
+                        await ImageCache.shared.setImage(uiImg, for: id)
+                    } else if let stringBody = String(data: data, encoding: .utf8) {
+                        struct ImageEnvelope: Decodable { let image: String }
+                        if let jsonData = stringBody.data(using: .utf8),
+                           let envelope = try? JSONDecoder().decode(ImageEnvelope.self, from: jsonData),
+                           let decoded = Data(base64Encoded: envelope.image, options: [.ignoreUnknownCharacters]),
+                           let uiImg = UIImage(data: decoded) {
+                            await ImageCache.shared.setImage(uiImg, for: id)
+                        } else if let decoded = Data(base64Encoded: stringBody.trimmingCharacters(in: .whitespacesAndNewlines), options: [.ignoreUnknownCharacters]),
+                                  let uiImg = UIImage(data: decoded) {
+                            await ImageCache.shared.setImage(uiImg, for: id)
+                        }
+                    }
+                }
+            }
+        }
     }
     
     var body: some View {
@@ -265,6 +328,7 @@ struct VotingContestsListView: View {
                                     imageName: imageName(for: votingContest))
                             .padding(.horizontal)
                     }
+                    .onAppear { prefetchTopImages(for: votingContest.contest_id) }
                     .buttonStyle(.plain)
                 }
                 
@@ -320,7 +384,7 @@ struct ActiveContestsListView: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: sortOption == .endingSoon ? "arrow.down" : "arrow.up")
+                            Image(systemName: sortOption == .endingSoon ? "arrow-down" : "arrow-up")
                             Text(sortOption.rawValue)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
@@ -372,6 +436,8 @@ struct CompletedContestsListView: View {
         var id: String { rawValue }
     }
     @State private var sortOption: SortOption = .newest
+    
+    @State private var prefetchedContestIds: Set<String> = []
 
     private var filteredAndSorted: [Contest] {
         let now = Date()
@@ -390,6 +456,41 @@ struct CompletedContestsListView: View {
         }
         return items
     }
+    
+    private func prefetchTopImages(for contestId: String, limit: Int = 6) {
+        // Prevent duplicate prefetch for the same contest
+        if prefetchedContestIds.contains(contestId) { return }
+        prefetchedContestIds.insert(contestId)
+        Task(priority: .background) {
+            // Hop to the main actor only to get the instance
+            let manager: NetworkManager = await MainActor.run { NetworkManager.getInstance() }
+            // Fetch submissions for this contest
+            let subs = (try? await manager.fetchSumbissions(contestId: contestId)) ?? []
+            // Sort by vote_count desc to prefetch likely leaders
+            let ranked = subs.sorted { $0.vote_count > $1.vote_count }
+            let count = min(limit, ranked.count)
+            for i in 0..<count {
+                let id = ranked[i].submission_id
+                if let _ = await ImageCache.shared.image(for: id) { continue }
+                if let data = try? await manager.getSubmissionImage(submissionId: id) {
+                    if let uiImg = UIImage(data: data) {
+                        await ImageCache.shared.setImage(uiImg, for: id)
+                    } else if let stringBody = String(data: data, encoding: .utf8) {
+                        struct ImageEnvelope: Decodable { let image: String }
+                        if let jsonData = stringBody.data(using: .utf8),
+                           let envelope = try? JSONDecoder().decode(ImageEnvelope.self, from: jsonData),
+                           let decoded = Data(base64Encoded: envelope.image, options: [.ignoreUnknownCharacters]),
+                           let uiImg = UIImage(data: decoded) {
+                            await ImageCache.shared.setImage(uiImg, for: id)
+                        } else if let decoded = Data(base64Encoded: stringBody.trimmingCharacters(in: .whitespacesAndNewlines), options: [.ignoreUnknownCharacters]),
+                                  let uiImg = UIImage(data: decoded) {
+                            await ImageCache.shared.setImage(uiImg, for: id)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -406,7 +507,7 @@ struct CompletedContestsListView: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: sortOption == .endingSoon ? "arrow.down" : "arrow.up")
+                            Image(systemName: sortOption == .endingSoon ? "arrow-down" : "arrow-up")
                             Text(sortOption.rawValue)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
@@ -434,7 +535,7 @@ struct CompletedContestsListView: View {
                         contestId: contest.contest_id,
                         votingPeriod: .init(start: contest.submission_start_date, end: contest.voting_end_date)
                     )
-                    NavigationLink(destination: ContestView(contestData: data)) {
+                    NavigationLink(destination: CompletedContestLeaderboardView(contestId: contest.contest_id, contestName: contest.name)) {
                         ContestCard(
                             title: contest.name,
                             subtitle: contest.description,
@@ -442,6 +543,7 @@ struct CompletedContestsListView: View {
                         )
                         .padding(.horizontal)
                     }
+                    .onAppear { prefetchTopImages(for: contest.contest_id) }
                     .buttonStyle(.plain)
                 }
 
