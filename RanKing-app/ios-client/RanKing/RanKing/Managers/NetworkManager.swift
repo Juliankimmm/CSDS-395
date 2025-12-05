@@ -124,13 +124,13 @@ class NetworkManager: ObservableObject {
         return true
     }
     
-    func sendSubmission(imageData: Data, contestId: Int, accessToken: String) async throws -> Bool {
-        guard let url = URL(string: "http://localhost:8585/contests/\(contestId)/submissions") else {
+    func sendSubmission(imageData: Data, contestId: Int) async throws -> Bool {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+//        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = createMultipartBody(
