@@ -8,8 +8,5 @@
 import Foundation
 
 public struct Vote: Codable {
-    public var voteId: Int
-    public var userId: Int
-    public var submissionId: Int
-    public var votedAt: String
+    var message : String?
 }

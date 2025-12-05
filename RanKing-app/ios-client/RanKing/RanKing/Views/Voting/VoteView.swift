@@ -8,14 +8,11 @@ struct VoteViewData {
 struct VoteView: View {
     
     let networkManager : NetworkManager = NetworkManager.getInstance()
-    
     let contestId: Int
-    
-    @State var allSubmissions : [SubmissionResponse] = []
-    @State private var topSubmission: SubmissionResponse?
-    @State private var bottomSubmission: SubmissionResponse?
+    @State var allSubmissions : [Submission] = []
+    @State private var topSubmission: Submission?
+    @State private var bottomSubmission: Submission?
     @State private var nextSubmissionIndex = 0
-    
     @State private var popUpScale : CGFloat = 1.0
     
     var body: some View {
@@ -27,20 +24,23 @@ struct VoteView: View {
             VStack(spacing: 20) {
                 if let submission = topSubmission {
                     VotableImageView(
-                        image: Image(submission.image_path),
+                        image: Image("jezthisguyishot"),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .top)
                         withAnimation {
                             popUpScale = 1.0
                         }
+                        Task {
+                            try? await networkManager.sendVote(submissionId: submission.sub_id, userId: 1);
+                        }
                     }
-                    .id(submission.id)
+                    .id(submission.sub_id)
                 }
 
                 if let submission = bottomSubmission {
                     VotableImageView(
-                        image: Image(submission.image_path),
+                        image: Image("cutiepie"),
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .bottom)
@@ -48,7 +48,7 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                     }
-                    .id(submission.id)
+                    .id(submission.sub_id)
                 }
             }
             
@@ -90,7 +90,7 @@ struct VoteView: View {
         print("GET submissions/{contest_id}")
         Task {
             allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
-            //TODO get the images
+            print(allSubmissions)
         }
         
         guard allSubmissions.count >= 2 else { return }
@@ -98,8 +98,6 @@ struct VoteView: View {
         topSubmission = allSubmissions[0]
         bottomSubmission = allSubmissions[1]
         nextSubmissionIndex = 2
-        
-        //TODO load Async ALL images
     }
     
     
