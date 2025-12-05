@@ -1,34 +1,32 @@
 # get_submissions_lambda.py
-import sys
-import logging
-import pymysql
 import json
+import boto3
 import os
+from decimal import Decimal
+from boto3.dynamodb.conditions import Key
 
-user_name = os.environ['USER_NAME']
-password = os.environ['PASSWORD']
-rds_proxy_host = os.environ['RDS_PROXY_HOST']
-db_name = os.environ['DB_NAME']
+dynamodb = boto3.resource('dynamodb')
+sub_table = dynamodb.Table(os.environ['SUBMISSIONS_TABLE'])
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-try:
-    conn = pymysql.connect(host=rds_proxy_host, user=user_name, passwd=password, db=db_name, connect_timeout=5)
-except pymysql.MySQLError as e:
-    logger.error("ERROR: Could not connect to MySQL instance.")
-    logger.error(e)
-    sys.exit(1)
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
     try:
         contest_id = event['pathParameters']['contest_id']
-    except:
-        return {"statusCode": 400, "body": "Missing contest_id"}
-
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:
-        sql = "SELECT * FROM Submissions WHERE contest_id=%s"
-        cur.execute(sql, (contest_id,))
-        submissions = cur.fetchall()
-
-    return {"statusCode": 200, "body": json.dumps(submissions, default=str)}
+        
+        # Query using the GSI (ContestIndex)
+        response = sub_table.query(
+            IndexName='ContestIndex',
+            KeyConditionExpression=Key('contest_id').eq(contest_id)
+        )
+        
+        items = response.get('Items', [])
+        
+        return {"statusCode": 200, "body": json.dumps(items, cls=DecimalEncoder)}
+        
+    except Exception as e:
+        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
