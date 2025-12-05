@@ -29,78 +29,124 @@ struct ContestView: View {
     @State private var showCamera: Bool = false
     
     @State private var didSelectImageFromCamera = false
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var isSubmitting: Bool = false
+    @State private var showSuccess: Bool = false
 
     var body: some View {
-        VStack {
-            Text("Upload to \(contestData.contestTitle)")
-                .font(.system(size: 28, weight: .bold))
-                .padding(.top)
-            Text(contestData.contestDescription)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-            
-            Group {
-                if let displayedImage {
-                    displayedImage
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(radius: 5)
-                        .padding()
+        ZStack {
+            VStack {
+                Text("Upload to \(contestData.contestTitle)")
+                    .font(.system(size: 28, weight: .bold))
+                    .padding(.top)
+                Text(contestData.contestDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                
+                Group {
+                    if let displayedImage {
+                        displayedImage
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(radius: 5)
+                            .padding()
+                    }
+                    Button("Submit") {
+                        Task {
+                            guard !isSubmitting else { return }
+                            isSubmitting = true
+                            var uploaded = false
+                            if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
+                                await postImage(imageData: data)
+                                uploaded = true
+                            } else if didSelectImageFromCamera, let ui = capturedUIImage, let data = ui.jpegData(compressionQuality: 0.9) {
+                                await postImage(imageData: data)
+                                uploaded = true
+                            }
+                            await MainActor.run {
+                                isSubmitting = false
+                                if uploaded {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        showSuccess = true
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                        dismiss()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isSubmitting)
                 }
-                Button("Submit") {
+                
+                Spacer()
+                
+                VStack {
+                    Text("Submit Fashion Image")
+                        .font(.headline)
+                        .padding()
+                    
+                    // Pick from photo library
+                    PhotosPicker(
+                        "Select Image",
+                        selection: $selectedImageItem,
+                        matching: .images
+                    )
+                    .buttonStyle(.borderedProminent)
+                    
+                    Button("Take Photo") {
+                        showCamera = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .sheet(isPresented: $showCamera) {
+                        CaptureImageView(isShown: $showCamera, image: $cameraImage, uiImage: $capturedUIImage)
+                    }
+                }
+                .onChange(of: cameraImage) {
+                    displayedImage = cameraImage
+                    didSelectImageFromCamera = true
+                }
+                .onChange(of: selectedImageItem) {
                     Task {
                         if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
-                            await postImage(imageData: data)
-                        } else if didSelectImageFromCamera, let ui = capturedUIImage, let data = ui.jpegData(compressionQuality: 0.9) {
-                            await postImage(imageData: data)
-                        } else {
-                            // No image selected: send empty payload or skip; here we simply return
+                            if let uiImage = UIImage(data: data) {
+                                displayedImage = Image(uiImage: uiImage)
+                            }
+                            didSelectImageFromCamera = false
                         }
                     }
                 }
-                .buttonStyle(.borderedProminent)
             }
             
-            Spacer()
+            if showSuccess {
+                VStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundStyle(.green)
+                    Text("Uploaded!")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
+                .padding(24)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.ultraThinMaterial))
+                .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
+                .transition(.opacity)
+                .allowsHitTesting(false)
+            }
             
-            VStack {
-                Text("Submit Fashion Image")
-                    .font(.headline)
+            if isSubmitting {
+                Color.black.opacity(0.08).ignoresSafeArea()
+                ProgressView("Uploading...")
                     .padding()
-
-                // Pick from photo library
-                PhotosPicker(
-                    "Select Image",
-                    selection: $selectedImageItem,
-                    matching: .images
-                )
-                .buttonStyle(.borderedProminent)
-
-                Button("Take Photo") {
-                    showCamera = true
-                }
-                .buttonStyle(.borderedProminent)
-                .sheet(isPresented: $showCamera) {
-                    CaptureImageView(isShown: $showCamera, image: $cameraImage, uiImage: $capturedUIImage)
-                }
-            }
-            .onChange(of: cameraImage) {
-                displayedImage = cameraImage
-                didSelectImageFromCamera = true
-            }
-            .onChange(of: selectedImageItem) {
-                Task {
-                    if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
-                        if let uiImage = UIImage(data: data) {
-                            displayedImage = Image(uiImage: uiImage)
-                        }
-                        didSelectImageFromCamera = false
-                    }
-                }
+                    .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
+                    .shadow(radius: 8, y: 4)
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showSuccess)
     }
     
     func postImage(imageData: Data) async {
