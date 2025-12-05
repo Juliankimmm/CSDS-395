@@ -148,6 +148,27 @@ class NetworkManager: ObservableObject {
         return true
     }
     
+    
+    func sendSubmission2(imageData: Data, contestId: Int, userId: Int) async throws -> Bool {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
+            throw NetworkError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let base64StringImage = imageData.base64EncodedString();
+        let userData = try JSONSerialization.data(withJSONObject: ["user_id": userId, "image": base64StringImage, "filename": "example.jpg"], options: [])
+
+        request.httpBody = userData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        print(String(data: data, encoding: .utf8) ?? "No data")
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return false;
+        }
+        return true
+    }
+    
     private func createMultipartBody(
         boundary: String,
         fieldName: String,
@@ -164,6 +185,7 @@ class NetworkManager: ObservableObject {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         return body
     }
+
     
     func sendVote(submissionId: Int, userId : Int) async throws -> Bool? {
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/vote") else {
