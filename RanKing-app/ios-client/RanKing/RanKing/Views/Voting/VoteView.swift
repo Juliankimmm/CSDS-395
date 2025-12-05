@@ -117,20 +117,6 @@ class SubmissionAndImage : ObservableObject, Identifiable {
     }
 }
 
-struct ObservableSubmissionView: View {
-    @ObservedObject var submissionAndImage: SubmissionAndImage
-    @Binding var scale: CGFloat
-    var onVote: (SwipeDirection) -> Void
-    
-    var body: some View {
-        VotableImageView(
-            image: submissionAndImage.image ?? Image(systemName: "photo"),
-            scale: $scale,
-            onVote: onVote
-        )
-        .id(submissionAndImage.submission.submission_id)
-    }
-}
 
 struct VoteView: View {
     
