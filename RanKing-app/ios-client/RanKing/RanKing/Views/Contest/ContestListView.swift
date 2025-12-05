@@ -14,6 +14,9 @@ private func imageName(for contest: Contest) -> String {
     if lower.contains("spring"){
         return "spring"
     }
+    if lower.contains("winter"){
+        return "winter"
+    }
     return ["fashion1", "fashion2", "fashion3"].randomElement() ?? "fashion1"
 }
 
@@ -108,7 +111,7 @@ struct ContestListView: View {
     
     var body: some View {
         TabView {
-            Tab("Active Contests", systemImage: "list.bullet") {
+            Tab("Active Contests", systemImage: "bolt.circle") {
                 NavigationStack {
                     ActiveContestsListView(contests: $contests, searchQuery: $searchQuery, sortOption: $sortOption)
                         .navigationBarTitleDisplayMode(.large)
@@ -145,10 +148,26 @@ struct ContestListView: View {
                 }
             }
 
-            Tab("Voting Contests", systemImage: "list.bullet") {
+            Tab("Voting Contests", systemImage: "checklist") {
                 NavigationStack {
                     VotingContestsListView(votingContests: $votingContests)
                         .navigationTitle("Voting Contests")
+                }
+            }
+            Tab("Completed Contests", systemImage: "checkmark.seal") {
+                NavigationStack {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("Completed Contests")
+                            .font(.title2.weight(.semibold))
+                        Text("Nothing to show yet.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .navigationTitle("Completed Contests")
                 }
             }
         }
