@@ -62,20 +62,86 @@ private struct ContestCard: View {
     }
 }
 
+private struct ContestFilterChips: View {
+    @Binding var selected: String
+    let options: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(options, id: \.self) { option in
+                    Button {
+                        selected = option
+                    } label: {
+                        Text(option)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(selected == option ? Color.primary.opacity(0.12) : Color.secondary.opacity(0.08))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
 struct ContestListView: View {
     
     let networkManager  = NetworkManager.getInstance()
     
-    @State var contests: [Contest] = []
+    enum SortOption: String, CaseIterable, Identifiable {
+        case newest = "Newest"
+        case endingSoon = "Ending Soon"
+        case popular = "Most Popular"
+        var id: String { rawValue }
+    }
     
+    @State var contests: [Contest] = []
     @State var votingContests: [Contest] = []
+    @State private var searchQuery: String = ""
+    @State private var sortOption: SortOption = .newest
     
     var body: some View {
         TabView {
             Tab("Active Contests", systemImage: "list.bullet") {
                 NavigationStack {
-                    ActiveContestsListView(contests: $contests)
-                        .navigationTitle("Active Contests")
+                    ActiveContestsListView(contests: $contests, searchQuery: $searchQuery, sortOption: $sortOption)
+                        .navigationBarTitleDisplayMode(.large)
+                        .toolbar {
+                            ToolbarItem(placement: .principal) {
+                                HStack(spacing: 10) {
+                              
+                                    Image(systemName: "crown.fill")
+                                        .foregroundStyle(.primary)
+                                        .imageScale(.large)
+                                        .symbolRenderingMode(.hierarchical)
+                                    Text("Active Contests")
+                                     
+                                        .font(.system(size: 34, weight: .semibold, design: .serif))
+                                        .kerning(0.5)
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.bottom, 6)
+                            }
+                        }
+                }
+                .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic))
+                .toolbar {
+                    Menu {
+                        ForEach(SortOption.allCases) { option in
+                            Button(option.rawValue) { sortOption = option }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
                 }
             }
 
@@ -123,11 +189,79 @@ struct VotingContestsListView: View {
 struct ActiveContestsListView: View {
     
     @Binding var contests : [Contest]
+    @Binding var searchQuery: String
+    @Binding var sortOption: ContestListView.SortOption
+    
+    private var filteredAndSorted: [Contest] {
+        var items = contests
+        // Filter by search query (name or description)
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !q.isEmpty {
+            items = items.filter { c in
+                c.name.lowercased().contains(q) || c.description.lowercased().contains(q)
+            }
+        }
+        // Sort options – placeholder logic (adjust when you have dates/popularity)
+        switch sortOption {
+        case .newest:
+            items = items.sorted { $0.contest_id > $1.contest_id }
+        case .endingSoon:
+            items = items.sorted { $0.contest_id < $1.contest_id }
+        case .popular:
+            break // no-op until popularity is available
+        }
+        return items
+    }
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                ForEach(contests, id: \.contest_id) { contest in
+                HStack {
+                    Text("\(filteredAndSorted.count) contests")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        withAnimation(.snappy) {
+                            switch sortOption {
+                            case .newest:
+                                sortOption = .endingSoon
+                            case .endingSoon:
+                                sortOption = .newest
+                            case .popular:
+                                // If currently popular, default to newest on tap
+                                sortOption = .newest
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: sortOption == .endingSoon ? "arrow.down" : "arrow.up")
+                            Text(sortOption.rawValue)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .opacity(0.7)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(Color.secondary.opacity(0.12))
+                        )
+                        .overlay(
+                            Capsule().strokeBorder(Color.secondary.opacity(0.2), lineWidth: 0.5)
+                        )
+                        .contentShape(Capsule())
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Toggle sort: currently sorted by \(sortOption.rawValue)")
+                    .hoverEffect(.highlight)
+                    .scaleEffect(1.0)
+                    .animation(.easeInOut(duration: 0.15), value: sortOption)
+                }
+                .padding(.horizontal)
+                
+                ForEach(filteredAndSorted, id: \.contest_id) { contest in
                     let data = ContestViewData(contestTitle: contest.name,
                                                contestDescription: contest.description,
                                                constantId: contest.contest_id,
@@ -151,3 +285,4 @@ struct ActiveContestsListView: View {
 #Preview {
     ContestListView()
 }
+
