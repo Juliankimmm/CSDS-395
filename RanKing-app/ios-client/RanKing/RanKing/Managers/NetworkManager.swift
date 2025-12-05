@@ -39,12 +39,22 @@ class NetworkManager: ObservableObject {
             throw NetworkError.invalidResponse
         }
         
+        let decoder = JSONDecoder()
+
+        // setup date formatter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        decoder.dateDecodingStrategy = .formatted(formatter)
+        
         print("200!")
         var contestsRes: [Contest]? = nil
         do {
-            let response = try JSONDecoder().decode(ContestResponse.self, from: data)
+            let response = try decoder.decode(ContestResponse.self, from: data)
             let contestsData = Data(response.body.utf8)
-            contestsRes = try JSONDecoder().decode([Contest].self, from: contestsData)
+            contestsRes = try decoder.decode([Contest].self, from: contestsData)
         } catch {
             print("Decoding Error :( \(error)")
             throw NetworkError.decodingError
@@ -150,6 +160,7 @@ class NetworkManager: ObservableObject {
     
     
     func sendSubmission2(imageData: Data, contestId: Int, userId: Int) async throws -> Bool {
+        print("Sending image")
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
         }
@@ -159,6 +170,7 @@ class NetworkManager: ObservableObject {
         let base64StringImage = imageData.base64EncodedString();
         let userData = try JSONSerialization.data(withJSONObject: ["user_id": userId, "image": base64StringImage, "filename": "example.jpg"], options: [])
 
+        print("Json: \(userData)")
         request.httpBody = userData
         
         let (data, response) = try await URLSession.shared.data(for: request)

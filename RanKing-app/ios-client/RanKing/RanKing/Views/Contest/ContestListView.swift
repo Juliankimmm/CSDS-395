@@ -159,6 +159,7 @@ struct ContestListView: View {
     func fetchData() {
         Task {
             contests = try await networkManager.fetchContests() ?? []
+            votingContests = Array(contests)
         }
     }
 }
