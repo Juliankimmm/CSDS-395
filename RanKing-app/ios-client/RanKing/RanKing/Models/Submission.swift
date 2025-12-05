@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 
-final class SubmissionResponse: Identifiable, Codable {
+struct Submission : Codable {
     var sub_id: Int
     var user_id: Int
     var contest_id: Int

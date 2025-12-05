@@ -80,7 +80,7 @@ struct ContestView: View {
         do {
             let accessToken = UserDefaults.standard.string(forKey: "token") ?? ""
             let submission = try await networkManager.sendSubmission(imageData: imageData, contestId: contestData.constantId, accessToken: accessToken)
-            print("Submission successful. URL: \(submission.image_path)")
+            print("Submission successful. URL")
         } catch {
             print("An error occurred during submission: \(error)")
         }

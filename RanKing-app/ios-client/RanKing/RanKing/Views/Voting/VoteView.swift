@@ -8,14 +8,11 @@ struct VoteViewData {
 struct VoteView: View {
     
     let networkManager : NetworkManager = NetworkManager.getInstance()
-    
     let contestId: Int
-    
-    @State var allSubmissions : [SubmissionResponse] = []
-    @State private var topSubmission: SubmissionResponse?
-    @State private var bottomSubmission: SubmissionResponse?
+    @State var allSubmissions : [Submission] = []
+    @State private var topSubmission: Submission?
+    @State private var bottomSubmission: Submission?
     @State private var nextSubmissionIndex = 0
-    
     @State private var popUpScale : CGFloat = 1.0
     
     var body: some View {
@@ -34,8 +31,11 @@ struct VoteView: View {
                         withAnimation {
                             popUpScale = 1.0
                         }
+                        Task {
+                            try? await networkManager.sendVote(submissionId: submission.sub_id, userId: 1);
+                        }
                     }
-                    .id(submission.id)
+                    .id(submission.sub_id)
                 }
 
                 if let submission = bottomSubmission {
@@ -48,7 +48,7 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                     }
-                    .id(submission.id)
+                    .id(submission.sub_id)
                 }
             }
             
@@ -89,9 +89,8 @@ struct VoteView: View {
     func setupInitialSubmissions() {
         print("GET submissions/{contest_id}")
         Task {
-//            allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
-            //TODO get the images
-            allSubmissions = [SubmissionResponse(), SubmissionResponse()]
+            allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
+            print(allSubmissions)
         }
         
         guard allSubmissions.count >= 2 else { return }
@@ -99,13 +98,11 @@ struct VoteView: View {
         topSubmission = allSubmissions[0]
         bottomSubmission = allSubmissions[1]
         nextSubmissionIndex = 2
-        
-        //TODO load Async ALL images
     }
     
     
 }
 
 #Preview {
-    VoteView(contestId: 12)
+    VoteView(contestId: 4)
 }

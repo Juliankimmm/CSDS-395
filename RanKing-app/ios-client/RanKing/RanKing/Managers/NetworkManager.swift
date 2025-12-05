@@ -54,7 +54,7 @@ class NetworkManager: ObservableObject {
         return contestsRes
     }
     
-    func fetchSumbissions(contestId: Int) async throws -> [SubmissionResponse]? {
+    func fetchSumbissions(contestId: Int) async throws -> [Submission]? {
         print(contestId)
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
@@ -66,17 +66,18 @@ class NetworkManager: ObservableObject {
         }
         
         
-        var submissions : [SubmissionResponse]? = nil
+        var submissions : [Submission]? = nil
         do {
-            submissions = try JSONDecoder().decode([SubmissionResponse].self, from: data)
+            submissions = try JSONDecoder().decode([Submission].self, from: data)
         } catch {
+            print("\(error)")
             throw NetworkError.decodingError
         }
         return submissions
     }
 
     // MARK: - POST Request
-    func register(username: String, email: String, password: String) async throws -> User? {
+    func register(username: String, email: String, password: String) async throws -> Bool? {
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/register") else {
             throw NetworkError.invalidURL
         }
@@ -85,54 +86,45 @@ class NetworkManager: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let userData = try JSONSerialization.data(withJSONObject: ["username": username, "email": email, "password": password], options: [])
+        let userData = try JSONSerialization.data(withJSONObject: ["username": username, "email": email, "password_hash": password], options: [])
 
         request.httpBody = userData
 
         let (data, response) = try await URLSession.shared.data(for: request)
         print(String(data: data, encoding: .utf8) ?? "No data")
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
-            throw NetworkError.invalidResponse
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return false;
         }
         
+        let result = String(data: data, encoding: .utf8) ?? "No Data"
         
-        do {
-            let createdPost = try JSONDecoder().decode(User.self, from: data)
-            return createdPost
-        } catch {
-            throw NetworkError.decodingError
+        if (result.contains("Successfully")) {
+            return true
         }
+        return false
     }
     
-    func login(email: String, password: String) async throws -> Token? {
+    func login(email: String, password: String) async throws -> Bool? {
+        print("login called")
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/login") else {
             throw NetworkError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let userData = try JSONSerialization.data(withJSONObject: ["email": email, "password": password], options: [])
+        let userData = try JSONSerialization.data(withJSONObject: ["email": email, "password_hash": password], options: [])
         request.httpBody = userData
         let (data, response) = try await URLSession.shared.data(for: request)
 
         print(String(data: data, encoding: .utf8) ?? "No data")
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
-            
-            throw NetworkError.invalidResponse
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return false
         }
-        
-        
-        do {
-            let createdPost = try JSONDecoder().decode(Token.self, from: data)
-            return createdPost
-        } catch {
-            print("\(error)")
-            throw NetworkError.decodingError
-        }
+        return true
     }
     
-    func sendSubmission(imageData: Data, contestId: Int, accessToken: String) async throws -> SubmissionResponse {
+    func sendSubmission(imageData: Data, contestId: Int, accessToken: String) async throws -> Bool {
         guard let url = URL(string: "http://localhost:8585/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
         }
@@ -148,24 +140,12 @@ class NetworkManager: ObservableObject {
             mimeType: "image/jpeg",
             fileData: imageData
         )
-        do {
-            print("Got here")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            print(String(data: data, encoding: .utf8) ?? "No data")
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
-                throw NetworkError.invalidResponse
-            }
-            do {
-                let createdSubmission = try JSONDecoder().decode(SubmissionResponse.self, from: data)
-                return createdSubmission
-            } catch {
-                print("Error decoding submission: \(error)")
-                throw NetworkError.decodingError
-            }
-        } catch {
-            print("Error sending submission: \(error)")
-            throw NetworkError.invalidResponse
+        let (data, response) = try await URLSession.shared.data(for: request)
+        print(String(data: data, encoding: .utf8) ?? "No data")
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return false;
         }
+        return true
     }
     
     private func createMultipartBody(
@@ -185,26 +165,24 @@ class NetworkManager: ObservableObject {
         return body
     }
     
-    func sendVote(submissionId: Int) async throws -> Vote? {
-        guard let url = URL(string: "http://localhost/submissions/\(submissionId)/vote") else {
+    func sendVote(submissionId: Int, userId : Int) async throws -> Bool? {
+        guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/vote") else {
             throw NetworkError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let userData = try JSONSerialization.data(withJSONObject: ["user_id": userId], options: [])
+        request.httpBody = userData
         
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
-            throw NetworkError.invalidResponse
+        print(String(data: data, encoding: .utf8) ?? "No data")
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            return false;
         }
-        
-        do {
-            let createdPost = try JSONDecoder().decode(Vote.self, from: data)
-            return createdPost
-        } catch {
-            throw NetworkError.decodingError
-        }
+        return true;
     }
     
     func testServerIsRunning() async throws -> Bool {
