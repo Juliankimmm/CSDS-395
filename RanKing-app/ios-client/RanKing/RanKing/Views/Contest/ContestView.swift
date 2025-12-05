@@ -23,8 +23,13 @@ struct ContestView: View {
     let contestData : ContestViewData
     
     @State private var selectedImageItem: PhotosPickerItem?
+    @State private var cameraImage: Image?
+    @State private var capturedUIImage: UIImage?
     @State private var displayedImage: Image?
+    @State private var showCamera: Bool = false
     
+    @State private var didSelectImageFromCamera = false
+
     var body: some View {
         VStack {
             Text(contestData.contestTitle)
@@ -42,7 +47,13 @@ struct ContestView: View {
                     .padding()
                 Button("Submit") {
                     Task {
-                        if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
+                        if didSelectImageFromCamera {
+                            if let ui = capturedUIImage,
+                               let data = ui.jpegData(compressionQuality: 0.9) {
+                                await postImage(imageData: data)
+                            }
+                        }
+                        else if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
                             await postImage(imageData: data)
                         }
                     }
@@ -60,9 +71,26 @@ struct ContestView: View {
                 Text("Submit Fashion Image")
                     .font(.headline)
                     .padding()
-                
-                PhotosPicker("Select Image", selection: $selectedImageItem, matching: .images)
-                    .buttonStyle(.borderedProminent)
+
+                // Pick from photo library
+                PhotosPicker(
+                    "Select Image",
+                    selection: $selectedImageItem,
+                    matching: .images
+                )
+                .buttonStyle(.borderedProminent)
+
+                Button("Take Photo") {
+                    showCamera = true
+                }
+                .buttonStyle(.borderedProminent)
+                .sheet(isPresented: $showCamera) {
+                    CaptureImageView(isShown: $showCamera, image: $cameraImage, uiImage: $capturedUIImage)
+                }
+            }
+            .onChange(of: cameraImage) {
+                displayedImage = cameraImage
+                didSelectImageFromCamera = true
             }
             .onChange(of: selectedImageItem) {
                 Task {
@@ -70,6 +98,7 @@ struct ContestView: View {
                         if let uiImage = UIImage(data: data) {
                             displayedImage = Image(uiImage: uiImage)
                         }
+                        didSelectImageFromCamera = false
                     }
                 }
             }
