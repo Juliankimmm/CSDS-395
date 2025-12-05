@@ -116,7 +116,6 @@ struct LoginView: View {
                         if let token = try? await networkManager.login(email: email, password: password) {
                             // Username currently unused by backend login; stored locally if needed
                             UserDefaults.standard.set(username, forKey: "username")
-                            UserDefaults.standard.set(token.access_token, forKey: "token")
                             withAnimation(.smooth) {
                                 isLoggedIn = true
                             }
