@@ -151,7 +151,6 @@ class NetworkManager: ObservableObject {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-//        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = createMultipartBody(
@@ -177,38 +176,25 @@ class NetworkManager: ObservableObject {
             }
 
             let (data, response) = try await URLSession.shared.data(from: url)
-
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 print("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
                 throw NetworkError.invalidResponse
             }
-
-            // SCENARIO 1: API Gateway already converted it to Binary (Image)
-            // If we can make a UIImage directly from the data, we are done.
             if UIImage(data: data) != nil {
                 print("Received raw binary image data")
                 return data
             }
-
-            // SCENARIO 2: It is a Base64 String
-            // We try to convert the data to a UTF8 string
             guard let base64String = String(data: data, encoding: .utf8) else {
                 print("Data received was neither an Image nor a String")
                 throw NetworkError.decodingError
             }
-
-            // CLEANING:
-            // 1. Remove double quotes (if API Gateway sent it as a JSON string "...")
-            // 2. Remove newlines or whitespace
             let cleaned = base64String
                 .replacingOccurrences(of: "\"", with: "")
                 .replacingOccurrences(of: "\n", with: "")
                 .replacingOccurrences(of: "\r", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // DECODING:
-            // .ignoreUnknownCharacters is the SWIFT equivalent of "base64 -i"
             guard let imageData = Data(base64Encoded: cleaned, options: .ignoreUnknownCharacters) else {
                 print("Base64 decode failed. String start: \(cleaned.prefix(20))...")
                 throw NetworkError.decodingError
@@ -235,7 +221,7 @@ class NetworkManager: ObservableObject {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         print(String(data: data, encoding: .utf8) ?? "No data")
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
             return false;
         }
         return true
@@ -259,7 +245,7 @@ class NetworkManager: ObservableObject {
     }
 
     
-    func sendVote(submissionId: String, userId : Int) async throws -> Bool? {
+    func sendVote(submissionId: String, userId : String) async throws -> Bool? {
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/vote") else {
             throw NetworkError.invalidURL
         }
@@ -273,9 +259,10 @@ class NetworkManager: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         print(String(data: data, encoding: .utf8) ?? "No data")
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
             return false;
         }
+        print("user_id: \(userId) Successfully voted on \(submissionId)")
         return true;
     }
     
