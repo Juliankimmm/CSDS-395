@@ -12,7 +12,7 @@ import PhotosUI
 struct ContestViewData {
     let contestTitle: String
     let contestDescription: String
-    let constantId: Int
+    let contestId: String
     let votingPeriod: DateInterval
 }
 
@@ -77,12 +77,15 @@ struct ContestView: View {
     }
     
     func postImage(imageData: Data) async {
-        if let submission = try? await networkManager.sendSubmission2(imageData: imageData, contestId: contestData.constantId, userId: 9) {
-            if submission {
-                print("Submission successful. URL")
-            }
-            else {
-                print("error")
+        if let userId = UserDefaults.standard.string(forKey: "user_id") {
+            print("User ID:", userId)
+            if let submission = try? await networkManager.sendSubmission2(imageData: imageData, contestId: contestData.contestId, userId: userId) {
+                if submission {
+                    print("Submission successful. URL")
+                }
+                else {
+                    print("error")
+                }
             }
         }
         
@@ -101,7 +104,7 @@ extension ContestViewData {
         .init(
             contestTitle: contestTitle,
             contestDescription: contestDescription,
-            constantId: 4,
+            contestId: "4",
             votingPeriod: votingPeriod
         )
     }

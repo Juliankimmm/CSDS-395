@@ -1,45 +1,56 @@
-# get_contests_lambda.py
-import sys
-import logging
-import pymysql
 import json
+import boto3
 import os
-import datetime
-
-user_name = os.environ['USER_NAME']
-password = os.environ['PASSWORD']
-rds_proxy_host = os.environ['RDS_PROXY_HOST']
-db_name = os.environ['DB_NAME']
+import logging
+from datetime import datetime
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-try:
-    conn = pymysql.connect(host=rds_proxy_host, user=user_name, passwd=password, db=db_name, connect_timeout=5)
-except pymysql.MySQLError as e:
-    logger.error("ERROR: Could not connect to MySQL instance.")
-    logger.error(e)
-    sys.exit(1)
+dynamodb = boto3.resource('dynamodb')
+table_name = os.environ['CONTESTS_TABLE']
+table = dynamodb.Table(table_name)
+
+# Helper to fix JSON serialization of Decimals
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
     query = event.get('queryStringParameters') or {}
     status = query.get('status')
-    now = datetime.datetime.utcnow()
-
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+    
+    # Scan all contests (acceptable for small datasets)
+    response = table.scan()
+    contests = response.get('Items', [])
+    
+    now = datetime.utcnow().isoformat()
+    
+    filtered_contests = []
+    
+    # Filter logic in Python
+    for c in contests:
+        # Ensure dates are strings in ISO format in DB: "2023-12-01T12:00:00"
+        sub_start = c.get('submission_start_date')
+        sub_end = c.get('submission_end_date')
+        vote_end = c.get('voting_end_date')
+        
         if status == "submission":
-            sql = "SELECT * FROM Contests WHERE submission_start_date <= %s AND submission_end_date >= %s"
-            cur.execute(sql, (now, now))
+            if sub_start <= now and sub_end >= now:
+                filtered_contests.append(c)
         elif status == "voting":
-            sql = "SELECT * FROM Contests WHERE submission_end_date <= %s AND voting_end_date >= %s"
-            cur.execute(sql, (now, now))
+            if sub_end <= now and vote_end >= now:
+                filtered_contests.append(c)
         elif status == "finished":
-            sql = "SELECT * FROM Contests WHERE voting_end_date < %s"
-            cur.execute(sql, (now,))
+            if vote_end < now:
+                filtered_contests.append(c)
         else:
-            sql = "SELECT * FROM Contests"
-            cur.execute(sql)
+            filtered_contests.append(c)
 
-        contests = cur.fetchall()
-
-    return {"statusCode": 200, "body": json.dumps(contests, default=str)}
+    return {
+        "statusCode": 200, 
+        "body": json.dumps(filtered_contests, cls=DecimalEncoder)
+    }
