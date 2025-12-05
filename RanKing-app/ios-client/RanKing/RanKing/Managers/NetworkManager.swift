@@ -151,7 +151,6 @@ class NetworkManager: ObservableObject {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-//        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = createMultipartBody(
