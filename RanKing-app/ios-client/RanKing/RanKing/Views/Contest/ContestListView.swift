@@ -335,7 +335,7 @@ struct ActiveContestsListView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Toggle sort: currently sorted by \(sortOption.rawValue)")
+                    .accessibilityLabel("Toggle sort: currently sorted by \(sortOption.rawValue)") 
                     .hoverEffect(.highlight)
                     .animation(.easeInOut(duration: 0.15), value: sortOption)
                 }

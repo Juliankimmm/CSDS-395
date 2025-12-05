@@ -32,10 +32,10 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                         Task {
-                            try? await networkManager.sendVote(submissionId: submission.sub_id, userId: 1);
+                            try? await networkManager.sendVote(submissionId: submission.submission_id, userId: 1);
                         }
                     }
-                    .id(submission.sub_id)
+                    .id(submission.submission_id)
                 }
 
                 if let submission = bottomSubmission {
@@ -48,7 +48,7 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                     }
-                    .id(submission.sub_id)
+                    .id(submission.submission_id)
                 }
             }
             
