@@ -1,0 +1,44 @@
+================================================================================
+MODEL EVALUATION REPORT
+================================================================================
+
+Dataset Statistics:
+  Total samples: 12097
+  Safe: 12032 (99.46%)
+  Unsafe: 65 (0.54%)
+
+Model Configuration:
+  Decision threshold: 0.5500
+
+Overall Performance:
+  Accuracy: 0.9992
+  Balanced Accuracy: 0.9613
+  F1 Score: 0.9231
+  ROC AUC: 0.9955
+
+Per-Class Metrics:
+              precision    recall  f1-score   support
+
+        Safe     0.9996    0.9996    0.9996     12032
+      Unsafe     0.9231    0.9231    0.9231        65
+
+    accuracy                         0.9992     12097
+   macro avg     0.9613    0.9613    0.9613     12097
+weighted avg     0.9992    0.9992    0.9992     12097
+
+
+Confusion Matrix:
+                  Predicted Safe  Predicted Unsafe
+  Actual Safe              12027                 5
+  Actual Unsafe                5                60
+
+Error Analysis:
+  Total errors: 10 (0.08%)
+  False Positives: 5
+  False Negatives: 5
+  Avg confidence on errors: 0.5462
+  Avg uncertainty on errors: 0.4368
+
+High Confidence Errors: 0
+
+================================================================================

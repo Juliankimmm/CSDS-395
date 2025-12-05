@@ -1,0 +1,8 @@
+{
+  "threshold": 0.55,
+  "accuracy": 0.9991733487641564,
+  "balanced_accuracy": 0.9613306822831424,
+  "f1_score": 0.9230769230769231,
+  "num_samples": 12097,
+  "num_errors": 10
+}

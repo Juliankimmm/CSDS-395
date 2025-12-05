@@ -1,0 +1,8 @@
+2025-11-18 19:38:47,368 | INFO | Training started - Log file: ./logs\training_20251118_193847.log
+2025-11-18 19:38:47,368 | INFO | Arguments: {'train_dir': './datasets/train', 'val_dir': './datasets/val', 'cache_images': False, 'img_size': 384, 'resize_schedule': '384', 'clip_weight': 0.15, 'dropout': 0.4, 'freeze_backbone': 0, 'use_attention': False, 'lr': 5e-05, 'weight_decay': 0.0001, 'batch_size': 12, 'epochs': 15, 'accum_steps': 2, 'num_workers': 4, 'focal_gamma': 0.5, 'cb_beta': 0.99, 'smoothing_safe': 0.05, 'smoothing_unsafe': 0.2, 'minority_oversample_factor': 3.0, 'curriculum_epochs': 3, 'mixup_alpha': 0.2, 'cutmix_alpha': 0.5, 'use_mixup': False, 'scheduler_t0': 5, 'swa_start': 10, 'use_onecycle': False, 'tta': False, 'early_stopping_patience': 5, 'early_stopping_min_delta': 0.001, 'checkpoint_dir': './checkpoints', 'keep_checkpoints': 3, 'resume': False, 'save_model': './models/moderation_model_best.pth', 'log_dir': './logs'}
+2025-11-18 19:38:47,594 | INFO | Class Distribution (train):
+2025-11-18 19:38:47,594 | INFO |    Safe (0):   92,148 samples
+2025-11-18 19:38:47,595 | INFO |    Unsafe (1): 301 samples
+2025-11-18 19:38:47,595 | INFO |    Imbalance ratio: 306.1:1
+2025-11-18 19:38:47,597 | INFO | Class-balanced weights: [0.9751208 1.0248792]
+2025-11-18 19:38:51,409 | INFO | Loading checkpoint from ./checkpoints\latest_checkpoint.pth

@@ -1,0 +1,75 @@
+2025-11-18 19:40:37,720 | INFO | Training started - Log file: ./logs\training_20251118_194037.log
+2025-11-18 19:40:37,720 | INFO | Arguments: {'train_dir': './datasets/train', 'val_dir': './datasets/val', 'cache_images': False, 'img_size': 384, 'resize_schedule': '384', 'clip_weight': 0.15, 'dropout': 0.4, 'freeze_backbone': 0, 'use_attention': False, 'lr': 5e-05, 'weight_decay': 0.0001, 'batch_size': 12, 'epochs': 15, 'accum_steps': 2, 'num_workers': 4, 'focal_gamma': 0.5, 'cb_beta': 0.99, 'smoothing_safe': 0.05, 'smoothing_unsafe': 0.2, 'minority_oversample_factor': 3.0, 'curriculum_epochs': 3, 'mixup_alpha': 0.2, 'cutmix_alpha': 0.5, 'use_mixup': False, 'scheduler_t0': 5, 'swa_start': 10, 'use_onecycle': False, 'tta': False, 'early_stopping_patience': 5, 'early_stopping_min_delta': 0.001, 'checkpoint_dir': './checkpoints', 'keep_checkpoints': 3, 'resume': False, 'save_model': './models/moderation_model_best.pth', 'log_dir': './logs'}
+2025-11-18 19:40:37,969 | INFO | Class Distribution (train):
+2025-11-18 19:40:37,969 | INFO |    Safe (0):   92,148 samples
+2025-11-18 19:40:37,970 | INFO |    Unsafe (1): 301 samples
+2025-11-18 19:40:37,970 | INFO |    Imbalance ratio: 306.1:1
+2025-11-18 19:40:37,971 | INFO | Class-balanced weights: [0.9751208 1.0248792]
+2025-11-18 19:40:39,226 | INFO | Loading checkpoint from ./checkpoints\latest_checkpoint.pth
+2025-11-18 19:40:40,250 | INFO | Checking for architecture compatibility...
+2025-11-18 19:40:40,327 | INFO | 
+======================================================================
+2025-11-18 19:40:40,330 | INFO | ======================================================================
+2025-11-18 19:40:40,331 | INFO | Resuming from epoch 8
+2025-11-18 19:40:40,331 | INFO | Previous best F1: 0.9313 at threshold 0.7475
+2025-11-18 19:40:40,331 | INFO | Training history entries: 9
+2025-11-18 19:40:40,332 | INFO | ======================================================================
+
+2025-11-18 19:40:40,334 | INFO | Starting training from epoch 9
+2025-11-18 19:40:40,334 | INFO |    Total epochs: 15
+2025-11-18 19:40:40,334 | INFO |    Curriculum phase: 3 epochs
+2025-11-18 19:40:40,334 | INFO |    Device: cuda
+2025-11-18 19:40:40,335 | INFO | 
+Epoch 10/15 | WEIGHTED | Size: 384px
+2025-11-19 09:20:24,672 | INFO | Results:
+2025-11-19 09:20:24,766 | INFO |    Loss: 0.681471 | Unc Loss: 0.001526
+2025-11-19 09:20:24,767 | INFO |    Acc: 0.9989 | F1: 0.9065 | AUC: 0.9691 | BalAcc: 0.9842
+2025-11-19 09:20:24,768 | INFO |    Per-class metrics:
+2025-11-19 09:20:24,780 | INFO |    Optimal threshold: 0.3713
+2025-11-19 09:20:59,435 | INFO | Checkpoint saved: epoch 9
+2025-11-19 09:20:59,438 | INFO | 
+Epoch 11/15 | WEIGHTED | Size: 384px
+2025-11-19 23:00:55,357 | INFO | Results:
+2025-11-19 23:00:55,358 | INFO |    Loss: 0.682231 | Unc Loss: 0.000970
+2025-11-19 23:00:55,358 | INFO |    Acc: 0.9992 | F1: 0.9254 | AUC: 0.9998 | BalAcc: 0.9766
+2025-11-19 23:00:55,359 | INFO |    Per-class metrics:
+2025-11-19 23:00:55,362 | INFO |    Optimal threshold: 0.2921
+2025-11-19 23:01:16,997 | INFO | Checkpoint saved: epoch 10
+2025-11-19 23:01:16,998 | INFO | 
+Epoch 12/15 | WEIGHTED | Size: 384px
+2025-11-20 12:41:21,898 | INFO | Results:
+2025-11-20 12:41:21,898 | INFO |    Loss: 0.681194 | Unc Loss: 0.000908
+2025-11-20 12:41:21,899 | INFO |    Acc: 0.9989 | F1: 0.9037 | AUC: 0.9999 | BalAcc: 0.9689
+2025-11-20 12:41:21,899 | INFO |    Per-class metrics:
+2025-11-20 12:41:21,902 | INFO |    Optimal threshold: 0.5693
+2025-11-20 12:41:45,202 | INFO | Checkpoint saved: epoch 11
+2025-11-20 12:41:45,203 | INFO | 
+Epoch 13/15 | WEIGHTED | Size: 384px
+2025-11-21 02:21:26,432 | INFO | Results:
+2025-11-21 02:21:26,432 | INFO |    Loss: 0.680958 | Unc Loss: 0.000800
+2025-11-21 02:21:26,433 | INFO |    Acc: 0.9993 | F1: 0.9313 | AUC: 0.9845 | BalAcc: 0.9690
+2025-11-21 02:21:26,433 | INFO |    Per-class metrics:
+2025-11-21 02:21:26,437 | INFO |    Optimal threshold: 0.7029
+2025-11-21 02:21:53,180 | INFO | Checkpoint saved: epoch 12
+2025-11-21 02:21:53,181 | INFO | 
+Epoch 14/15 | WEIGHTED | Size: 384px
+2025-11-21 16:01:39,969 | INFO | Results:
+2025-11-21 16:01:40,003 | INFO |    Loss: 0.680686 | Unc Loss: 0.000627
+2025-11-21 16:01:40,003 | INFO |    Acc: 0.9994 | F1: 0.9457 | AUC: 0.9999 | BalAcc: 0.9691
+2025-11-21 16:01:40,003 | INFO |    Per-class metrics:
+2025-11-21 16:01:40,007 | INFO |    Optimal threshold: 0.7326
+2025-11-21 16:02:09,324 | INFO | Checkpoint saved: epoch 13
+2025-11-21 16:02:19,598 | INFO | 
+Epoch 15/15 | WEIGHTED | Size: 384px
+2025-11-22 05:42:11,698 | INFO | Results:
+2025-11-22 05:42:11,698 | INFO |    Loss: 0.681475 | Unc Loss: 0.000683
+2025-11-22 05:42:11,699 | INFO |    Acc: 0.9994 | F1: 0.9449 | AUC: 0.9845 | BalAcc: 0.9615
+2025-11-22 05:42:11,699 | INFO |    Per-class metrics:
+2025-11-22 05:42:11,703 | INFO |    Optimal threshold: 0.7673
+2025-11-22 05:42:36,543 | INFO | Checkpoint saved: epoch 14
+2025-11-22 05:42:36,545 | INFO | 
+======================================================================
+2025-11-22 05:42:36,546 | INFO | Post-Training Optimization
+2025-11-22 05:42:36,547 | INFO | ======================================================================
+2025-11-22 05:42:36,548 | INFO | Updating batch normalization for SWA model...
+2025-11-22 05:42:36,552 | INFO | Calibrating temperature scaling...
