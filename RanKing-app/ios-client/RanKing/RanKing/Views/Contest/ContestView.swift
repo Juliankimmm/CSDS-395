@@ -32,41 +32,39 @@ struct ContestView: View {
 
     var body: some View {
         VStack {
-            Text(contestData.contestTitle)
-                .font(.largeTitle)
+            Text("Upload to \(contestData.contestTitle)")
+                .font(.system(size: 28, weight: .bold))
                 .padding(.top)
             Text(contestData.contestDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             Spacer()
             
-            if let displayedImage {
-                displayedImage
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(radius: 5)
-                    .padding()
+            Group {
+                if let displayedImage {
+                    displayedImage
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(radius: 5)
+                        .padding()
+                }
                 Button("Submit") {
                     Task {
-                        if didSelectImageFromCamera {
-                            if let ui = capturedUIImage,
-                               let data = ui.jpegData(compressionQuality: 0.9) {
-                                await postImage(imageData: data)
-                            }
-                        }
-                        else if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
+                        if let data = try? await selectedImageItem?.loadTransferable(type: Data.self) {
                             await postImage(imageData: data)
+                        } else if didSelectImageFromCamera, let ui = capturedUIImage, let data = ui.jpegData(compressionQuality: 0.9) {
+                            await postImage(imageData: data)
+                        } else {
+                            // No image selected: send empty payload or skip; here we simply return
                         }
                     }
                 }
                 .buttonStyle(.borderedProminent)
-            } else {
-                Text("No image selected")
-                    .padding()
             }
             
             Spacer()
             
-            Text("Voting Period: \(contestData.votingPeriod)")
             VStack {
                 Text("Submit Fashion Image")
                     .font(.headline)
@@ -139,3 +137,4 @@ extension ContestViewData {
 #Preview {
     ContestView(contestData: .previewValue())
 }
+
