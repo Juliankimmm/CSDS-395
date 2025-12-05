@@ -52,14 +52,12 @@ struct LoginView: View {
 
                         HStack(spacing: 18) {
                             ForEach(Array(["fashion1", "fashion2", "fashion3"].enumerated()), id: \.element) { index, img in
-                                Image(img)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
+                                BlurFilledImage(named: img)
                                     .frame(width: 90, height: 130)
                                     .clipShape(RoundedRectangle(cornerRadius: 18))
                                     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 3)
                                     .staggeredBubbly(Double(index) * 0.8)
-                                    .phaseIn(Double(index) * 0.4) 
+                                    .phaseIn(Double(index) * 0.4)
                             }
                         }
                         .padding(.top, 10)
@@ -137,6 +135,41 @@ struct LoginView: View {
     }
 }
 
+private struct BlurFilledImage: View {
+    let image: Image
+
+    init(named name: String) {
+        self.image = Image(name)
+    }
+
+    init(_ image: Image) {
+        self.image = image
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                // Blurred background to fill any letterboxing areas
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .blur(radius: 20)
+                    .saturation(1.2)
+                    .opacity(0.9)
+
+                // Foreground image with aspect fill
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+            }
+        }
+    }
+}
+
 private struct EmailPasswordLoginSheet: View {
     @Binding var email: String
     @Binding var username: String
@@ -179,12 +212,6 @@ private struct EmailPasswordLoginSheet: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .phaseIn(0.2)
-
-                        TextField("Username", text: $username)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .phaseIn(0.3)
 
                         SecureField("Password", text: $password)
                             .textFieldStyle(RoundedBorderTextFieldStyle())

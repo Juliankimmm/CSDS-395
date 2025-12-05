@@ -5,6 +5,66 @@ struct VoteViewData {
     var image2 : Image
 }
 
+struct ObservableSubmissionView: View {
+    // This tells SwiftUI: "When this object changes, redraw THIS view immediately"
+    @ObservedObject var submissionAndImage: SubmissionAndImage
+    @Binding var scale: CGFloat
+    var onVote: (SwipeDirection) -> Void
+    
+    var body: some View {
+        ZStack {
+            VotableImageView(
+                image: submissionAndImage.image ?? Image(systemName: "photo"),
+                scale: $scale,
+                onVote: onVote
+            )
+            .id(submissionAndImage.submission.submission_id)
+
+            // Delayed loading indicator: shows only if image hasn't arrived quickly
+            DelayedProgressOverlay(isLoading: submissionAndImage.image == nil, delay: 0.2)
+        }
+    }
+}
+
+private struct DelayedProgressOverlay: View {
+    let isLoading: Bool
+    let delay: Double
+    @State private var show: Bool = false
+
+    var body: some View {
+        Group {
+            if show && isLoading {
+                ZStack {
+                    Color.black.opacity(0.08)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.secondary)
+                        .scaleEffect(1.1)
+                }
+                .transition(.opacity)
+            }
+        }
+        .onChange(of: isLoading) { _, newValue in
+            if newValue {
+                show = false
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    if isLoading { withAnimation(.easeIn(duration: 0.15)) { show = true } }
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.1)) { show = false }
+            }
+        }
+        .task {
+            if isLoading {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                if isLoading { withAnimation(.easeIn(duration: 0.15)) { show = true } }
+            }
+        }
+    }
+}
+
 @MainActor
 class SubmissionAndImage : ObservableObject, Identifiable {
     var submission: Submission
@@ -18,11 +78,40 @@ class SubmissionAndImage : ObservableObject, Identifiable {
     private func loadImage() {
         print("Start downloading: \(submission.submission_id)")
         Task {
+            let id = submission.submission_id
+            // 0) Cache first
+            if let cached = await ImageCache.shared.image(for: id) {
+                self.image = Image(uiImage: cached)
+                return
+            }
+            // Fetch bytes from backend
             if let data = try? await NetworkManager.getInstance()
-                .getSubmissionImage(submissionId: submission.submission_id),
-               let uiImg = UIImage(data: data) {
-                self.image = Image(uiImage: uiImg)
-                print("Finished downloading: \(submission.submission_id)")
+                .getSubmissionImage(submissionId: id) {
+                // 1) Try direct bytes -> UIImage
+                if let uiImg = UIImage(data: data) {
+                    await ImageCache.shared.setImage(uiImg, for: id)
+                    self.image = Image(uiImage: uiImg)
+                    return
+                }
+                // 2) Try to interpret as UTF8 base64 string
+                if let stringBody = String(data: data, encoding: .utf8) {
+                    struct ImageEnvelope: Decodable { let image: String }
+                    if let jsonData = stringBody.data(using: .utf8),
+                       let envelope = try? JSONDecoder().decode(ImageEnvelope.self, from: jsonData),
+                       let decoded = Data(base64Encoded: envelope.image, options: [.ignoreUnknownCharacters]),
+                       let uiImg = UIImage(data: decoded) {
+                        await ImageCache.shared.setImage(uiImg, for: id)
+                        self.image = Image(uiImage: uiImg)
+                        return
+                    }
+                    if let decoded = Data(base64Encoded: stringBody.trimmingCharacters(in: .whitespacesAndNewlines),
+                                          options: [.ignoreUnknownCharacters]),
+                       let uiImg = UIImage(data: decoded) {
+                        await ImageCache.shared.setImage(uiImg, for: id)
+                        self.image = Image(uiImage: uiImg)
+                        return
+                    }
+                }
             }
         }
     }
