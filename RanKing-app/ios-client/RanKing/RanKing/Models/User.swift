@@ -8,8 +8,5 @@
 import Foundation
 
 public struct User: Codable {
-    public var userId: Int
-    public var username: String
-    public var email: String
-    public var createdAt: String
+    public var user_id: String
 }

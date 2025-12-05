@@ -9,17 +9,9 @@ import Foundation
 import SwiftData
 
 struct Submission : Codable {
-    var sub_id: Int
-    var user_id: Int
-    var contest_id: Int
-    var image_path: String
+    var submission_id: String
+    var user_id: String
+    var contest_id: String
     var submitted_at: String
-    
-    init() {
-        sub_id = 0
-        user_id = 0
-        contest_id = 0
-        image_path = ""
-        submitted_at = ""
-    }
+    var vote_count: Int
 }

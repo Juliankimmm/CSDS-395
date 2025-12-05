@@ -4,9 +4,9 @@ struct LoginView: View {
     
     let networkManager = NetworkManager.getInstance()
     
-    @State private var email = ""
-    @State private var username = ""
-    @State private var password = ""
+    @State private var email = "test@example.com"
+    @State private var username = "alskdjhf"
+    @State private var password = "secret123"
     @State private var showEmailLoginSheet: Bool = false
     @State private var showRegisterSheet: Bool = false
     
@@ -115,7 +115,7 @@ struct LoginView: View {
                     doNetworkLogin: { email, username, password in
                         if let token = try? await networkManager.login(email: email, password: password) {
                             // Username currently unused by backend login; stored locally if needed
-                            UserDefaults.standard.set(username, forKey: "username")
+                            UserDefaults.standard.set(token, forKey: "user_id")
                             withAnimation(.smooth) {
                                 isLoggedIn = true
                             }

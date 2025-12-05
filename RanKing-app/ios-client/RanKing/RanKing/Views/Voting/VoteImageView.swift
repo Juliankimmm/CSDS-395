@@ -12,49 +12,56 @@ struct VotableImageView: View {
     let onVote: (SwipeDirection) -> Void
 
     var body: some View {
-        image
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(radius: 5)
-            .offset(x: xOffset, y: yOffset)
-            .opacity(opacity)
-            .scaleEffect(scale)
-            .gesture(
-                DragGesture(minimumDistance: 20)
-                    .onChanged { value in
-                        yOffset = value.translation.height
-                        xOffset = value.translation.width
-                    }
-                    .onEnded { value in
-                        withAnimation(.spring()) {
-                            if value.translation.height > 200 {
-                                yOffset = 1000
-                                opacity = 0
-                                onVote(.down)
-                            }
-                            else if value.translation.height < -200 {
-                                yOffset = -1000
-                                opacity = 0
-                                onVote(.up)
-                            }
-                            else if value.translation.width > 100 {
-                                xOffset = 1000
-                                opacity = 0
-                                onVote(.up)
-                            }
-                            else if value.translation.width < -100 {
-                                xOffset = -1000
-                                opacity = 0
-                                onVote(.up)
-                            }
-                            else {
-                                yOffset = 0
-                                xOffset = 0
+        ZStack {
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(radius: 5)
+                .offset(x: xOffset, y: yOffset)
+                .opacity(opacity)
+                .scaleEffect(scale)
+                .gesture(
+                    DragGesture(minimumDistance: 20)
+                        .onChanged { value in
+                            yOffset = value.translation.height
+                            xOffset = value.translation.width
+                        }
+                        .onEnded { value in
+                            withAnimation(.spring()) {
+                                if value.translation.height > 200 {
+                                    yOffset = 1000
+                                    opacity = 0
+                                    onVote(.down)
+                                }
+                                else if value.translation.height < -200 {
+                                    yOffset = -1000
+                                    opacity = 0
+                                    onVote(.up)
+                                }
+                                else if value.translation.width > 100 {
+                                    xOffset = 1000
+                                    opacity = 0
+                                    onVote(.up)
+                                }
+                                else if value.translation.width < -100 {
+                                    xOffset = -1000
+                                    opacity = 0
+                                    onVote(.up)
+                                }
+                                else {
+                                    yOffset = 0
+                                    xOffset = 0
+                                }
                             }
                         }
-                    }
-            )
+                )
+        }
+        .onAppear {
+            Task {
+                
+            }
+        }
 
     }
 }

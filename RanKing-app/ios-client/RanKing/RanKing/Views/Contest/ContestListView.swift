@@ -344,7 +344,7 @@ struct ActiveContestsListView: View {
                 ForEach(filteredAndSorted, id: \.contest_id) { contest in
                     let data = ContestViewData(contestTitle: contest.name,
                                                contestDescription: contest.description,
-                                               constantId: contest.contest_id,
+                                               contestId: contest.contest_id,
                                                votingPeriod: .init(start: Date(), duration: 120))
                     NavigationLink(destination: ContestView(contestData: data)) {
                         ContestCard(title: data.contestTitle,
@@ -431,7 +431,7 @@ struct CompletedContestsListView: View {
                     let data = ContestViewData(
                         contestTitle: contest.name,
                         contestDescription: contest.description,
-                        constantId: contest.contest_id,
+                        contestId: contest.contest_id,
                         votingPeriod: .init(start: contest.submission_start_date, end: contest.voting_end_date)
                     )
                     NavigationLink(destination: ContestView(contestData: data)) {

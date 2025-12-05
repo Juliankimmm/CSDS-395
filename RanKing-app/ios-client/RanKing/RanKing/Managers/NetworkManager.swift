@@ -41,9 +41,9 @@ class NetworkManager: ObservableObject {
         
         let decoder = JSONDecoder()
 
-        // setup date formatter
+//         setup date formatter
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
 
@@ -64,7 +64,7 @@ class NetworkManager: ObservableObject {
         return contestsRes
     }
     
-    func fetchSumbissions(contestId: Int) async throws -> [Submission]? {
+    func fetchSumbissions(contestId: String) async throws -> [Submission]? {
         print(contestId)
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
@@ -115,7 +115,7 @@ class NetworkManager: ObservableObject {
         return false
     }
     
-    func login(email: String, password: String) async throws -> Bool? {
+    func login(email: String, password: String) async throws -> String? {
         print("login called")
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/login") else {
             throw NetworkError.invalidURL
@@ -128,10 +128,21 @@ class NetworkManager: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         print(String(data: data, encoding: .utf8) ?? "No data")
+        
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            return false
+            print("Error on login")
+            return nil
         }
-        return true
+        
+        var submissions : User? = nil
+        do {
+            submissions = try JSONDecoder().decode(User.self, from: data)
+        } catch {
+            print("\(error)")
+            throw NetworkError.decodingError
+        }
+        
+        return submissions?.user_id
     }
     
     func sendSubmission(imageData: Data, contestId: Int) async throws -> Bool {
@@ -158,8 +169,58 @@ class NetworkManager: ObservableObject {
         return true
     }
     
+    func getSubmissionImage(submissionId: String) async throws -> Data {
+            print("Getting Image for: \(submissionId)")
+            
+            guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/image") else {
+                throw NetworkError.invalidURL
+            }
+
+            let (data, response) = try await URLSession.shared.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("Server error: \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                throw NetworkError.invalidResponse
+            }
+
+            // SCENARIO 1: API Gateway already converted it to Binary (Image)
+            // If we can make a UIImage directly from the data, we are done.
+            if UIImage(data: data) != nil {
+                print("Received raw binary image data")
+                return data
+            }
+
+            // SCENARIO 2: It is a Base64 String
+            // We try to convert the data to a UTF8 string
+            guard let base64String = String(data: data, encoding: .utf8) else {
+                print("Data received was neither an Image nor a String")
+                throw NetworkError.decodingError
+            }
+
+            // CLEANING:
+            // 1. Remove double quotes (if API Gateway sent it as a JSON string "...")
+            // 2. Remove newlines or whitespace
+            let cleaned = base64String
+                .replacingOccurrences(of: "\"", with: "")
+                .replacingOccurrences(of: "\n", with: "")
+                .replacingOccurrences(of: "\r", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // DECODING:
+            // .ignoreUnknownCharacters is the SWIFT equivalent of "base64 -i"
+            guard let imageData = Data(base64Encoded: cleaned, options: .ignoreUnknownCharacters) else {
+                print("Base64 decode failed. String start: \(cleaned.prefix(20))...")
+                throw NetworkError.decodingError
+            }
+            
+            print("Successfully decoded Base64")
+            return imageData
+        }
+
     
-    func sendSubmission2(imageData: Data, contestId: Int, userId: Int) async throws -> Bool {
+    
+    func sendSubmission2(imageData: Data, contestId: String, userId: String) async throws -> Bool {
         print("Sending image")
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/contests/\(contestId)/submissions") else {
             throw NetworkError.invalidURL
@@ -170,7 +231,6 @@ class NetworkManager: ObservableObject {
         let base64StringImage = imageData.base64EncodedString();
         let userData = try JSONSerialization.data(withJSONObject: ["user_id": userId, "image": base64StringImage, "filename": "example.jpg"], options: [])
 
-        print("Json: \(userData)")
         request.httpBody = userData
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -199,7 +259,7 @@ class NetworkManager: ObservableObject {
     }
 
     
-    func sendVote(submissionId: Int, userId : Int) async throws -> Bool? {
+    func sendVote(submissionId: String, userId : Int) async throws -> Bool? {
         guard let url = URL(string: "https://b5xfrkkof2.execute-api.us-east-2.amazonaws.com/Deploy1/submissions/\(submissionId)/vote") else {
             throw NetworkError.invalidURL
         }

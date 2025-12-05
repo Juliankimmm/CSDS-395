@@ -5,13 +5,51 @@ struct VoteViewData {
     var image2 : Image
 }
 
+struct ObservableSubmissionView: View {
+    // This tells SwiftUI: "When this object changes, redraw THIS view immediately"
+    @ObservedObject var submissionAndImage: SubmissionAndImage
+    @Binding var scale: CGFloat
+    var onVote: (SwipeDirection) -> Void
+    
+    var body: some View {
+        VotableImageView(
+            image: submissionAndImage.image ?? Image(systemName: "photo"),
+            scale: $scale,
+            onVote: onVote
+        )
+        // This ensures SwiftUI sees it as a unique view when you swap submissions
+        .id(submissionAndImage.submission.submission_id)
+    }
+}
+
+@MainActor
+class SubmissionAndImage : ObservableObject, Identifiable {
+    var submission: Submission
+    @Published var image: Image? = nil
+    
+    init(submission: Submission) {
+        self.submission = submission
+        loadImage()
+    }
+    
+    private func loadImage() {
+        Task {
+            if let data = try? await NetworkManager.getInstance()
+                .getSubmissionImage(submissionId: submission.submission_id),
+               let uiImg = UIImage(data: data) {
+                self.image = Image(uiImage: uiImg)
+            }
+        }
+    }
+}
+
 struct VoteView: View {
     
     let networkManager : NetworkManager = NetworkManager.getInstance()
-    let contestId: Int
+    let contestId: String
     @State var allSubmissions : [Submission] = []
-    @State private var topSubmission: Submission?
-    @State private var bottomSubmission: Submission?
+    @State private var topSubmission: SubmissionAndImage?
+    @State private var bottomSubmission: SubmissionAndImage?
     @State private var nextSubmissionIndex = 0
     @State private var popUpScale : CGFloat = 1.0
     
@@ -23,8 +61,8 @@ struct VoteView: View {
 
             VStack(spacing: 20) {
                 if let submission = topSubmission {
-                    VotableImageView(
-                        image: Image("jezthisguyishot"),
+                    ObservableSubmissionView(
+                        submissionAndImage: submission,
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .top)
@@ -32,15 +70,14 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                         Task {
-                            try? await networkManager.sendVote(submissionId: submission.sub_id, userId: 1);
+                            try? await networkManager.sendVote(submissionId: submission.submission.submission_id, userId: 1);
                         }
                     }
-                    .id(submission.sub_id)
                 }
 
                 if let submission = bottomSubmission {
-                    VotableImageView(
-                        image: Image("cutiepie"),
+                    ObservableSubmissionView(
+                        submissionAndImage: submission,
                         scale: $popUpScale
                     ) { voteDirection in
                         replaceSubmission(in: .bottom)
@@ -48,7 +85,6 @@ struct VoteView: View {
                             popUpScale = 1.0
                         }
                     }
-                    .id(submission.sub_id)
                 }
             }
             
@@ -76,9 +112,9 @@ struct VoteView: View {
         let newSubmission = allSubmissions[nextSubmissionIndex]
         withAnimation(.bouncy(duration: 0.5)) {
             if position == .top {
-                topSubmission = newSubmission
+                topSubmission = SubmissionAndImage(submission: newSubmission)
             } else {
-                bottomSubmission = newSubmission
+                bottomSubmission = SubmissionAndImage(submission: newSubmission)
             }
             popUpScale = 0.1
         }
@@ -91,18 +127,22 @@ struct VoteView: View {
         Task {
             allSubmissions = try await networkManager.fetchSumbissions(contestId: contestId) ?? []
             print(allSubmissions)
+            
+            if allSubmissions.count >= 2 {
+                topSubmission = SubmissionAndImage(submission: allSubmissions[0])
+                bottomSubmission = SubmissionAndImage(submission: allSubmissions[1])
+                nextSubmissionIndex = 2
+            }
+            else if allSubmissions.count == 1 {
+                topSubmission = SubmissionAndImage(submission: allSubmissions[0])
+                nextSubmissionIndex = 1
+            }
         }
-        
-        guard allSubmissions.count >= 2 else { return }
-        
-        topSubmission = allSubmissions[0]
-        bottomSubmission = allSubmissions[1]
-        nextSubmissionIndex = 2
     }
     
     
 }
 
 #Preview {
-    VoteView(contestId: 4)
+    VoteView(contestId: "403")
 }

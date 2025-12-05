@@ -14,7 +14,7 @@ final class ContestResponse : Codable  {
 }
 
 final class Contest : Codable  {
-    var contest_id : Int
+    var contest_id : String
     var name: String
     var description: String
     var submission_start_date: Date
