@@ -17,7 +17,7 @@ final class Contest : Codable  {
     var contest_id : Int
     var name: String
     var description: String
-    var submission_start_date: String
-    var submission_end_date: String
-    var voting_end_date : String
+    var submission_start_date: Date
+    var submission_end_date: Date
+    var voting_end_date : Date
 }
